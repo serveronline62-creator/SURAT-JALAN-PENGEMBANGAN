@@ -3403,13 +3403,13 @@
                 'Tgl Order': fmt(order['Tgl Order']),
                 'Tgl Terima Part': fmt(order['TGL TERIMA PART']),
                 'Lama Pengiriman': val(order['JUMLAH']) + (order['JUMLAH'] ? ' hari' : ''),
-                'No. Order Pabrik': val(order['ORDER KE PABRIK']),
+                'No. Order ': val(order['NO. ORDER']),
                 'Keterangan': val(order['Keterangan Pemenuhan'])
             };
             var emojis = { 'No. Order': '📋', 'Status': '📋', 'Tgl Pengajuan': '📅', 'No. Service': '🆔',
                 'Type (IDNO)': '📌', 'No. Serie': '🔢', 'No Gudang': '🏢', 'Nama Part': '🧩', 'QTY': '📦',
                 'Prod.': '🏭', 'Layanan': '🛠️', 'Nama Konsumen': '👤', 'No. HP': '📱', 'Tgl Order': '📅',
-                'Tgl Terima Part': '📅', 'Lama Pengiriman': '⏳', 'No. Order Pabrik': '🏗️', 'Keterangan': '📝' };
+                'Tgl Terima Part': '📅', 'Lama Pengiriman': '⏳', 'No. Order': '🏗️', 'Keterangan': '📝' };
             for (var key in fields) {
                 pesan += (emojis[key] || '•') + ' *' + key + '*: ' + fields[key] + '\n';
             }

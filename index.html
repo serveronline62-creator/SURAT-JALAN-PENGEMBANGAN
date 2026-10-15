@@ -1,58 +1,1129 @@
-version: 2
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📦 Order Komponen System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* ===== TOKENS ===== */
+        :root, [data-theme="dark"] {
+            --bg-primary: #0b1120; --bg-secondary: #111827; --bg-card: #1a2332; --bg-card-hover: #1e293b;
+            --bg-input: #0f172a; --border: #1e3a5f; --border-focus: #00d4aa;
+            --accent: #00d4aa; --accent-dim: rgba(0,212,170,0.15); --accent-glow: rgba(0,212,170,0.3);
+            --warning: #f59e0b; --danger: #ef4444; --info: #3b82f6; --success: #10b981; --gotw: #8b5cf6;
+            --text-primary: #f1f5f9; --text-secondary: #94a3b8; --text-muted: #64748b;
+            --shadow: 0 4px 24px rgba(0,0,0,0.3); --shadow-glow: 0 0 30px rgba(0,212,170,0.08);
+            --navbar-bg: rgba(11,17,32,0.85); --table-head-bg: rgba(0,0,0,0.25);
+            --row-hover: rgba(0,212,170,0.03); --overlay-bg: rgba(0,0,0,0.6);
+            --chip-bg: transparent; --toast-bg: #1a2332; --modal-bg: #1a2332;
+            --radius: 8px; --radius-lg: 14px;
+            --ready-color: #10b981; --ready-bg: rgba(16,185,129,0.12); --ready-border: rgba(16,185,129,0.2);
+        }
+        [data-theme="light"] {
+            --bg-primary: #f0f4f8; --bg-secondary: #e2e8f0; --bg-card: #ffffff; --bg-card-hover: #f8fafc;
+            --bg-input: #f1f5f9; --border: #cbd5e1; --border-focus: #0d9488;
+            --accent: #0d9488; --accent-dim: rgba(13,148,136,0.12); --accent-glow: rgba(13,148,136,0.15);
+            --warning: #d97706; --danger: #dc2626; --info: #2563eb; --success: #059669; --gotw: #7c3aed;
+            --text-primary: #0f172a; --text-secondary: #475569; --text-muted: #94a3b8;
+            --shadow: 0 4px 24px rgba(0,0,0,0.08); --shadow-glow: 0 0 20px rgba(13,148,136,0.06);
+            --navbar-bg: rgba(240,244,248,0.9); --table-head-bg: #f1f5f9;
+            --row-hover: rgba(13,148,136,0.04); --overlay-bg: rgba(0,0,0,0.3);
+            --chip-bg: #ffffff; --toast-bg: #ffffff; --modal-bg: #ffffff;
+            --ready-color: #059669; --ready-bg: rgba(5,150,105,0.12); --ready-border: rgba(5,150,105,0.2);
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-primary);
+            color: var(--text-primary); min-height: 100vh; overflow-x: hidden;
+            transition: background .4s ease, color .4s ease;
+        }
+        body::before {
+            content: ''; position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(ellipse at 20% 20%, rgba(0,212,170,.06) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 80%, rgba(59,130,246,.04) 0%, transparent 50%);
+            pointer-events: none; z-index: 0; animation: bgFloat 30s ease-in-out infinite alternate;
+        }
+        [data-theme="light"] body::before {
+            background: radial-gradient(ellipse at 20% 20%, rgba(13,148,136,.04) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 80%, rgba(37,99,235,.03) 0%, transparent 50%);
+        }
+        @keyframes bgFloat { 0% { transform: translate(0,0); } 100% { transform: translate(-2%,-1%) rotate(2deg); } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+        :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-updates:
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
-    # Batch the routine churn into a few PRs instead of one per package, so the
-    # ones that actually need review (majors, runtime deps) stand out.
-    groups:
-      build-tooling:
-        patterns:
-          - vite
-          - sass
-          - postcss
-          - autoprefixer
-          - rimraf
-        update-types:
-          - minor
-          - patch
-      linting:
-        patterns:
-          - eslint
-          - '@eslint/*'
-          - prettier
-          - globals
-        update-types:
-          - minor
-          - patch
-      runtime:
-        patterns:
-          - bootstrap
-          - bootstrap-icons
-          - alpinejs
-          - apexcharts
-          - sweetalert2
-          - prismjs
-          - '@popperjs/core'
-          - '@fontsource-variable/*'
-        update-types:
-          - minor
-          - patch
-    labels:
-      - dependencies
-    commit-message:
-      prefix: 'deps'
-      prefix-development: 'deps-dev'
+        /* ===== AUTH ===== */
+        .auth-screen { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: var(--bg-primary); overflow-y: auto; }
+        .auth-screen.hidden { display: none; }
+        .auth-card {
+            position: relative; z-index: 1; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 20px; padding: 2.5rem; width: 100%; max-width: 420px; margin: 2rem 1rem;
+            box-shadow: 0 8px 60px rgba(0,0,0,.4), 0 0 80px rgba(0,212,170,.06); animation: authCardIn .5s ease-out;
+        }
+        @keyframes authCardIn { from { opacity: 0; transform: translateY(30px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .auth-logo { display: flex; align-items: center; justify-content: center; gap: 14px; margin-bottom: .5rem; }
+        .auth-logo-icon {
+            width: 52px; height: 52px; background: linear-gradient(135deg, var(--accent), #00a88a);
+            border-radius: 14px; display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: #0b1120; font-weight: 800; box-shadow: 0 0 30px rgba(0,212,170,.3);
+        }
+        [data-theme="light"] .auth-logo-icon { color: #fff; }
+        .auth-logo-text { font-size: 1.5rem; font-weight: 900; letter-spacing: -.5px; }
+        .auth-logo-text span { color: var(--accent); }
+        .auth-subtitle { text-align: center; color: var(--text-muted); font-size: .85rem; margin-bottom: 2rem; }
+        .auth-tabs { display: flex; gap: 4px; background: var(--bg-input); border-radius: 10px; padding: 4px; margin-bottom: 1.75rem; }
+        .auth-tab { flex: 1; padding: 9px 0; text-align: center; border-radius: 8px; font-size: .82rem; font-weight: 700; color: var(--text-muted); cursor: pointer; transition: all .3s ease; border: none; background: none; font-family: inherit; }
+        .auth-tab.active { background: var(--accent); color: #0b1120; box-shadow: 0 0 16px rgba(0,212,170,.25); }
+        [data-theme="light"] .auth-tab.active { color: #fff; }
+        .auth-form { display: none; flex-direction: column; gap: 1rem; }
+        .auth-form.active { display: flex; animation: afFade .3s ease-out; }
+        @keyframes afFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .auth-form .fg { display: flex; flex-direction: column; gap: 5px; }
+        .auth-form .fl { font-size: .75rem; font-weight: 600; color: var(--text-secondary); }
+        .auth-form .rq { color: var(--danger); }
+        .auth-form .fi {
+            background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 11px 14px; font-size: .88rem; font-family: inherit; color: var(--text-primary);
+            transition: all .3s ease; outline: none; width: 100%;
+        }
+        .auth-form .fi:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-dim); }
+        .auth-form .fi::placeholder { color: var(--text-muted); }
+        .aiw { position: relative; }
+        .aiw .fi { padding-right: 44px; }
+        .aiw .tpw { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: .9rem; padding: 4px; transition: color .2s; }
+        .aiw .tpw:hover { color: var(--accent); }
+        .abtn {
+            display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+            padding: 12px 24px; border-radius: var(--radius); border: none; font-family: inherit;
+            font-size: .9rem; font-weight: 700; cursor: pointer; transition: all .3s ease;
+            background: linear-gradient(135deg, var(--accent), #00a88a); color: #0b1120;
+            box-shadow: 0 0 24px rgba(0,212,170,.25); margin-top: .25rem;
+        }
+        [data-theme="light"] .abtn { color: #fff; }
+        .abtn:hover { box-shadow: 0 0 36px rgba(0,212,170,.4); transform: translateY(-1px); }
+        .aerr { display: none; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.2); border-radius: var(--radius); padding: 10px 14px; font-size: .8rem; color: #f87171; align-items: center; gap: 8px; }
+        [data-theme="light"] .aerr { color: #dc2626; }
+        .aerr.show { display: flex; animation: afFade .3s ease-out; }
+        .aftr { text-align: center; margin-top: 1.25rem; font-size: .78rem; color: var(--text-muted); }
+        .aftr a { color: var(--accent); text-decoration: none; font-weight: 600; cursor: pointer; }
+        .aftr a:hover { text-decoration: underline; }
+        .pws { height: 3px; border-radius: 2px; background: var(--border); margin-top: 4px; overflow: hidden; }
+        .pwsb { height: 100%; border-radius: 2px; width: 0; transition: all .4s ease; }
+        .pwst { font-size: .68rem; margin-top: 2px; color: var(--text-muted); min-height: 14px; }
 
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: monthly
-    labels:
-      - dependencies
-    commit-message:
-      prefix: 'ci'
+        /* ===== NAVBAR ===== */
+        .app-wrapper { display: none; position: relative; z-index: 1; }
+        .app-wrapper.visible { display: block; }
+        .navbar {
+            position: sticky; top: 0; z-index: 100; background: var(--navbar-bg);
+            backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 0 2rem;
+            transition: background .4s ease, border-color .4s ease;
+        }
+        .navbar-inner { max-width: 1500px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 64px; }
+        .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .logo-icon {
+            width: 40px; height: 40px; background: linear-gradient(135deg, var(--accent), #00a88a);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: #0b1120; font-weight: 800; box-shadow: 0 0 20px rgba(0,212,170,.25);
+        }
+        [data-theme="light"] .logo-icon { color: #fff; }
+        .logo-text { font-size: 1.15rem; font-weight: 800; color: var(--text-primary); letter-spacing: -.5px; }
+        .logo-text span { color: var(--accent); }
+        .nav-right { display: flex; align-items: center; gap: 12px; }
+        .last-sync { font-size: .75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,.4); } 50% { opacity: .7; box-shadow: 0 0 0 6px rgba(16,185,129,0); } }
+        .theme-toggle {
+            width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--border);
+            background: var(--bg-card); color: var(--text-secondary); display: flex; align-items: center;
+            justify-content: center; cursor: pointer; font-size: 1.1rem; transition: all .4s ease; position: relative; overflow: hidden;
+        }
+        .theme-toggle:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .theme-toggle .icon-sun, .theme-toggle .icon-moon { position: absolute; transition: all .4s cubic-bezier(.4,0,.2,1); }
+        [data-theme="dark"] .theme-toggle .icon-sun { transform: translateY(40px) rotate(90deg); opacity: 0; }
+        [data-theme="dark"] .theme-toggle .icon-moon { transform: translateY(0) rotate(0deg); opacity: 1; }
+        [data-theme="light"] .theme-toggle .icon-sun { transform: translateY(0) rotate(0deg); opacity: 1; }
+        [data-theme="light"] .theme-toggle .icon-moon { transform: translateY(-40px) rotate(-90deg); opacity: 0; }
+        .user-menu { position: relative; }
+        .user-btn {
+            display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 8px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary);
+            cursor: pointer; font-family: inherit; font-size: .78rem; font-weight: 600; transition: all .3s ease;
+        }
+        .user-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+        .user-avatar {
+            width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), #00a88a);
+            display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 800; color: #0b1120; flex-shrink: 0;
+        }
+        [data-theme="light"] .user-avatar { color: #fff; }
+        .user-dropdown {
+            display: none; position: absolute; top: calc(100% + 8px); right: 0; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow);
+            min-width: 240px; z-index: 200; overflow: hidden; animation: afFade .2s ease-out;
+        }
+        .user-dropdown.show { display: block; }
+        .udh { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+        .udn { font-size: .85rem; font-weight: 700; color: var(--text-primary); word-break: break-all; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .role-badge { font-size: .6rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .5px; }
+        .role-badge.admin { background: rgba(245,158,11,.15); color: #fbbf24; border: 1px solid rgba(245,158,11,.3); }
+        .role-badge.user { background: rgba(59,130,246,.15); color: #60a5fa; border: 1px solid rgba(59,130,246,.3); }
+        .ude { font-size: .72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; word-break: break-all; margin-top: 2px; }
+        .udi {
+            display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: .82rem;
+            color: var(--text-secondary); cursor: pointer; transition: all .2s ease; border: none;
+            background: none; width: 100%; text-align: left; font-family: inherit; font-weight: 500;
+        }
+        .udi:hover { background: var(--row-hover); color: var(--text-primary); }
+        .udi.danger { color: var(--danger); }
+        .udi.danger:hover { background: rgba(239,68,68,.08); }
+        .udi i { width: 18px; text-align: center; font-size: .85rem; }
+
+        /* ===== MAIN ===== */
+        .main-container { max-width: 1500px; margin: 0 auto; padding: 2rem; }
+        .main-tabs {
+            display: flex; gap: 4px; background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 5px; margin-bottom: 1.5rem; width: fit-content; flex-wrap: wrap;
+        }
+        .main-tab {
+            display: flex; align-items: center; gap: 10px; padding: 10px 24px; border-radius: 9px;
+            font-size: .85rem; font-weight: 700; color: var(--text-muted); cursor: pointer;
+            transition: all .3s ease; border: none; background: none; font-family: inherit;
+        }
+        .main-tab:hover { color: var(--text-secondary); }
+        .main-tab.active { background: var(--accent); color: #0b1120; box-shadow: 0 0 20px rgba(0,212,170,.25); }
+        [data-theme="light"] .main-tab.active { color: #fff; }
+        .main-tab .tab-count { font-family: 'JetBrains Mono', monospace; font-size: .72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; background: rgba(128,128,128,.15); line-height: 1.2; }
+        .main-tab.active .tab-count { background: rgba(0,0,0,.15); }
+        .tab-panel { display: none; animation: afFade .3s ease-out; }
+        .tab-panel.active { display: block; }
+
+        /* ===== STATS ===== */
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            padding: 1rem 1.1rem; display: flex; align-items: center; gap: .85rem; transition: all .3s ease;
+        }
+        .stat-card:hover { border-color: var(--accent); box-shadow: var(--shadow-glow); transform: translateY(-2px); }
+        .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+        .stat-icon.total { background: rgba(0,212,170,.12); color: var(--accent); }
+        .stat-icon.pending { background: rgba(239,68,68,.12); color: var(--danger); }
+        .stat-icon.proses { background: rgba(168,85,247,.12); color: #a855f7; }
+        .stat-icon.ready { background: var(--ready-bg); color: var(--ready-color); }
+        .stat-value { font-size: 1.4rem; font-weight: 800; line-height: 1; font-family: 'JetBrains Mono', monospace; }
+        .stat-label { font-size: .65rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+        .riwayat-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .riwayat-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.1rem; display: flex; align-items: center; gap: .85rem; transition: all .3s ease; }
+        .riwayat-stat:hover { border-color: var(--info); box-shadow: 0 0 20px rgba(59,130,246,.08); transform: translateY(-2px); }
+        .rs-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: .9rem; background: rgba(59,130,246,.12); color: var(--info); flex-shrink: 0; }
+        .rs-val { font-size: 1.4rem; font-weight: 800; line-height: 1; font-family: 'JetBrains Mono', monospace; color: var(--info); }
+        .rs-lbl { font-size: .65rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+
+        /* ===== FORM ===== */
+        .form-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem; transition: all .3s ease; }
+        .form-card:hover { border-color: var(--accent); box-shadow: var(--shadow-glow); }
+        .form-section-title { font-size: .75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: .85rem; display: flex; align-items: center; gap: 8px; }
+        .form-section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, var(--border), transparent); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-label { font-size: .75rem; font-weight: 600; color: var(--text-secondary); letter-spacing: .3px; }
+        .form-label .required { color: var(--danger); margin-left: 2px; }
+        .form-input, .form-select, .form-textarea {
+            background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 9px 12px; font-size: .85rem; font-family: inherit; color: var(--text-primary);
+            transition: all .3s ease; outline: none; width: 100%;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-dim); }
+        .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+        .form-input.mono { font-family: 'JetBrains Mono', monospace; text-transform: uppercase; }
+        .form-select {
+            cursor: pointer; appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 12px center; padding-right: 36px;
+        }
+        .form-select option, .status-select option { background: var(--bg-card); color: var(--text-primary); }
+        .form-textarea { resize: vertical; min-height: 60px; }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 22px; border-radius: var(--radius); border: 1px solid transparent;
+            font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
+            transition: all .3s ease; white-space: nowrap;
+        }
+        .btn:active { transform: scale(.97); }
+        .btn-primary { background: linear-gradient(135deg, var(--accent), #00a88a); color: #0b1120; box-shadow: 0 0 20px rgba(0,212,170,.2); }
+        [data-theme="light"] .btn-primary { color: #fff; }
+        .btn-primary:hover { box-shadow: 0 0 30px rgba(0,212,170,.4); transform: translateY(-1px); }
+        .btn-secondary { background: transparent; border-color: var(--border); color: var(--text-secondary); }
+        .btn-secondary:hover { border-color: var(--text-muted); color: var(--text-primary); background: rgba(128,128,128,.05); }
+        .btn-danger { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.3); color: var(--danger); }
+        .btn-danger:hover { background: rgba(239,68,68,.2); }
+        .btn-sm { padding: 6px 14px; font-size: .78rem; }
+        .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+        .btn-download { background: linear-gradient(135deg, #1d6f42, #1a5c38); color: #fff; border: 1px solid rgba(29,111,66,.4); box-shadow: 0 0 16px rgba(29,111,66,.2); }
+        .btn-download:hover { box-shadow: 0 0 28px rgba(29,111,66,.4); transform: translateY(-1px); }
+
+        /* ===== FILTER TEKNISI ===== */
+        .filter-teknisi-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; min-height: 40px; margin-bottom: 1rem; }
+        .filter-teknisi-bar .filter-label { font-size: .7rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; display: flex; align-items: center; gap: 6px; }
+        .filter-teknisi-bar .filter-label .count-badge { font-size: .6rem; background: var(--bg-input); padding: 1px 8px; border-radius: 10px; color: var(--text-muted); }
+        .filter-teknisi-chip {
+            padding: 4px 14px; border-radius: 16px; border: 1px solid var(--border); background: var(--chip-bg);
+            color: var(--text-secondary); font-family: inherit; font-size: .7rem; font-weight: 600;
+            cursor: pointer; transition: all .3s ease; white-space: nowrap;
+        }
+        .filter-teknisi-chip:hover { border-color: var(--text-muted); color: var(--text-primary); background: var(--accent-dim); }
+        .filter-teknisi-chip.active { background: var(--accent); border-color: var(--accent); color: #0b1120; box-shadow: 0 0 12px rgba(0,212,170,.2); }
+        [data-theme="light"] .filter-teknisi-chip.active { color: #fff; }
+        .filter-teknisi-chip.clear-filter { border-color: var(--border); color: var(--text-muted); }
+        .filter-teknisi-chip.clear-filter.active { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,.08); }
+        .filter-teknisi-chip .chip-count { font-size: .6rem; opacity: .6; margin-left: 4px; }
+
+        /* ===== TABLE ===== */
+        .table-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+        .table-toolbar { padding: 1.15rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+        .table-toolbar h2 { font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .table-toolbar h2 i { color: var(--accent); }
+        .toolbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .toolbar-search { position: relative; }
+        .toolbar-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: .8rem; pointer-events: none; }
+        .toolbar-search input {
+            background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 9px 12px 9px 34px; font-size: .8rem; font-family: inherit; color: var(--text-primary);
+            outline: none; width: 220px; transition: all .3s ease;
+        }
+        .toolbar-search input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-dim); }
+        .table-scroll { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+        thead th {
+            background: var(--table-head-bg); padding: 10px 14px; text-align: left;
+            font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);
+            border-bottom: 1px solid var(--border); white-space: nowrap;
+        }
+        tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        tbody tr { transition: background .2s ease; }
+        tbody tr:hover { background: var(--row-hover); }
+        tbody tr:last-child td { border-bottom: none; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .td-time { font-size: .72rem; color: var(--text-secondary); white-space: nowrap; }
+        .cell-sub { font-size: .7rem; color: var(--text-muted); margin-top: 2px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .empty-row { text-align: center; color: var(--text-muted); font-style: italic; padding: 2.5rem 1rem !important; font-size: .8rem; }
+        .empty-row i { display: block; font-size: 1.6rem; margin-bottom: .5rem; opacity: .4; }
+        .row-actions { display: flex; gap: 6px; }
+        .action-btn {
+            width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--bg-input); color: var(--text-secondary); cursor: pointer;
+            font-size: .78rem; transition: all .25s ease; display: flex; align-items: center; justify-content: center;
+        }
+        .action-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .action-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(239,68,68,.1); }
+        .status-select {
+            padding: 5px 28px 5px 10px; border-radius: 8px; font-size: .7rem; font-weight: 800;
+            border: 1px solid; cursor: pointer; appearance: none; font-family: inherit;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 8px center; letter-spacing: .5px;
+        }
+        .st-pending { color: var(--danger); border-color: rgba(239,68,68,.3); background-color: rgba(239,68,68,.08); }
+        .st-proses { color: #a855f7; border-color: rgba(168,85,247,.3); background-color: rgba(168,85,247,.08); }
+        .st-ready { color: var(--ready-color); border-color: var(--ready-border); background-color: var(--ready-bg); }
+        .act-badge { font-size: .62rem; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .5px; }
+        .act-new { background: rgba(0,212,170,.12); color: var(--accent); }
+        .act-status { background: rgba(168,85,247,.12); color: #a855f7; }
+        .act-del { background: rgba(239,68,68,.12); color: var(--danger); }
+
+        /* ===== TRACKING LION PARCEL ===== */
+        .tracking-hero { margin-bottom: 1.25rem; }
+        .tracking-hero h2 { font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .tracking-hero h2 i { color: var(--accent); }
+        .tracking-hero p { font-size: .8rem; color: var(--text-muted); margin-top: 4px; }
+        .tracking-search-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+            padding: 1.25rem; display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1rem; box-shadow: var(--shadow-glow);
+        }
+        .tracking-input-wrap { flex: 1; min-width: 220px; position: relative; display: flex; align-items: center; }
+        .tracking-input-wrap i { position: absolute; left: 14px; color: var(--text-muted); font-size: .85rem; pointer-events: none; }
+        .tracking-input-wrap input {
+            width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 11px 14px 11px 38px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace;
+            font-size: .88rem; outline: none; transition: all .3s ease; text-transform: uppercase;
+        }
+        .tracking-input-wrap input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--accent-dim); }
+        .tracking-input-wrap input::placeholder { color: var(--text-muted); text-transform: none; }
+        .lp-recent { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+        .lp-recent .lbl { font-size: .68rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+        .lp-recent .chip {
+            padding: 4px 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--chip-bg);
+            color: var(--text-secondary); font-family: 'JetBrains Mono', monospace; font-size: .7rem;
+            cursor: pointer; transition: all .3s ease;
+        }
+        .lp-recent .chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .lp-result-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; animation: afFade .3s ease-out; }
+        .lp-result-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .lp-result-head .stt { font-family: 'JetBrains Mono', monospace; font-size: 1rem; font-weight: 700; }
+        .lp-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 16px; font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
+        .lp-badge.success { background: var(--ready-bg); color: var(--ready-color); border: 1px solid var(--ready-border); }
+        .lp-badge.warning { background: rgba(251,191,36,.12); color: #fbbf24; border: 1px solid rgba(251,191,36,.2); }
+        .lp-badge.danger { background: rgba(239,68,68,.12); color: var(--danger); border: 1px solid rgba(239,68,68,.25); }
+        .lp-badge.info { background: rgba(59,130,246,.12); color: var(--info); border: 1px solid rgba(59,130,246,.25); }
+        .lp-badge.muted { background: rgba(128,128,128,.12); color: var(--text-secondary); border: 1px solid var(--border); }
+        .lp-detail-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .75rem 1.25rem;
+            padding: 1rem; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1rem;
+        }
+        .lp-detail-item .lbl { font-size: .62rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); font-weight: 700; }
+        .lp-detail-item .val { font-size: .82rem; font-weight: 600; margin-top: 2px; word-break: break-word; }
+        .lp-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 1rem; }
+        .lp-timeline { position: relative; padding-left: 26px; margin-top: .5rem; }
+        .lp-timeline::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
+        .lp-tl-item { position: relative; padding: 0 0 1.1rem 10px; }
+        .lp-tl-item:last-child { padding-bottom: 0; }
+        .lp-tl-dot { position: absolute; left: -25px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--bg-card); border: 2px solid var(--accent); box-shadow: 0 0 10px var(--accent-glow); }
+        .lp-tl-item.latest .lp-tl-dot { background: var(--accent); }
+        .lp-tl-time { font-size: .68rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .lp-tl-desc { font-size: .84rem; font-weight: 600; margin-top: 2px; }
+        .lp-tl-loc { font-size: .7rem; color: var(--text-secondary); margin-top: 2px; }
+        .lp-tl-loc i { color: var(--accent); font-size: .65rem; margin-right: 3px; }
+        .lp-empty { color: var(--text-muted); font-size: .78rem; font-style: italic; text-align: center; padding: 1rem 0; }
+        .lp-error { display: flex; align-items: flex-start; gap: 12px; background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.25); border-radius: var(--radius-lg); padding: 1.25rem; animation: afFade .3s ease-out; }
+        .lp-error i { color: var(--danger); font-size: 1.3rem; margin-top: 2px; }
+        .lp-error strong { color: var(--danger); font-size: .85rem; }
+        .lp-error p { font-size: .8rem; color: var(--text-secondary); margin-top: 2px; }
+        .lp-error small { color: var(--text-muted); font-size: .7rem; }
+        .lp-raw details { margin-top: .75rem; }
+        .lp-raw summary { font-size: .72rem; color: var(--text-muted); cursor: pointer; }
+        .lp-raw pre { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); padding: .85rem; margin-top: .5rem; font-size: .7rem; overflow-x: auto; color: var(--text-secondary); }
+
+        /* ===== TOAST ===== */
+        #toastWrap { position: fixed; bottom: 20px; right: 20px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; }
+        .toast {
+            display: flex; align-items: center; gap: 10px; background: var(--toast-bg);
+            border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px;
+            font-size: .8rem; font-weight: 600; box-shadow: var(--shadow); animation: toastIn .3s ease; max-width: 360px;
+        }
+        .toast i { font-size: 1rem; flex-shrink: 0; }
+        .toast-success i { color: var(--success); }
+        .toast-danger i { color: var(--danger); }
+        .toast-warning i { color: var(--warning); }
+        .toast-info i { color: var(--info); }
+        .toast.out { opacity: 0; transform: translateX(20px); transition: all .3s; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: none; } }
+
+        @media (max-width: 768px) {
+            .navbar { padding: 0 1rem; }
+            .main-container { padding: 1rem; }
+            .main-tabs { width: 100%; }
+            .main-tab { flex: 1; justify-content: center; padding: 10px 12px; }
+            .last-sync { display: none; }
+            .table-toolbar { flex-direction: column; align-items: stretch; }
+            .toolbar-search input { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ============ AUTH SCREEN ============ -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <div class="auth-logo-icon">📦</div>
+                <div class="auth-logo-text">Order<span>Komponen</span></div>
+            </div>
+            <div class="auth-subtitle">System Manajemen Order &amp; Tracking Kiriman</div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab active" data-auth="login">Masuk</button>
+                <button class="auth-tab" data-auth="register">Daftar</button>
+            </div>
+
+            <!-- LOGIN -->
+            <form class="auth-form active" id="formLogin" autocomplete="off">
+                <div class="aerr" id="loginErr"><i class="fas fa-circle-exclamation"></i><span></span></div>
+                <div class="fg">
+                    <label class="fl">Email <span class="rq">*</span></label>
+                    <input class="fi" id="liEmail" type="email" placeholder="nama@perusahaan.com" required />
+                </div>
+                <div class="fg">
+                    <label class="fl">Password <span class="rq">*</span></label>
+                    <div class="aiw">
+                        <input class="fi" id="liPass" type="password" placeholder="••••••••" required />
+                        <button class="tpw" type="button" data-target="liPass"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <button class="abtn" type="submit"><i class="fas fa-right-to-bracket"></i> Masuk</button>
+                <div class="aftr">Belum punya akun? <a data-goto="register">Daftar sekarang</a></div>
+            </form>
+
+            <!-- REGISTER -->
+            <form class="auth-form" id="formRegister" autocomplete="off">
+                <div class="aerr" id="regErr"><i class="fas fa-circle-exclamation"></i><span></span></div>
+                <div class="fg">
+                    <label class="fl">Nama Lengkap <span class="rq">*</span></label>
+                    <input class="fi" id="rgName" type="text" placeholder="Budi Santoso" required />
+                </div>
+                <div class="fg">
+                    <label class="fl">Email <span class="rq">*</span></label>
+                    <input class="fi" id="rgEmail" type="email" placeholder="nama@perusahaan.com" required />
+                </div>
+                <div class="fg">
+                    <label class="fl">Password <span class="rq">*</span> (min. 6 karakter)</label>
+                    <div class="aiw">
+                        <input class="fi" id="rgPass" type="password" placeholder="••••••••" required />
+                        <button class="tpw" type="button" data-target="rgPass"><i class="fas fa-eye"></i></button>
+                    </div>
+                    <div class="pws"><div class="pwsb" id="pwBar"></div></div>
+                    <div class="pwst" id="pwText"></div>
+                </div>
+                <button class="abtn" type="submit"><i class="fas fa-user-plus"></i> Daftar</button>
+                <div class="aftr">Sudah punya akun? <a data-goto="login">Masuk di sini</a></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ APP ============ -->
+    <div class="app-wrapper" id="appWrapper">
+        <nav class="navbar">
+            <div class="navbar-inner">
+                <a class="logo" href="#">
+                    <div class="logo-icon">📦</div>
+                    <div class="logo-text">Order<span>Komponen</span></div>
+                </a>
+                <div class="nav-right">
+                    <span class="last-sync"><span class="sync-dot" style="display:inline-block;vertical-align:middle;margin-right:6px"></span><span id="lastSync">Belum sync</span></span>
+                    <button class="theme-toggle" id="themeToggle" title="Ganti tema">
+                        <i class="fas fa-moon icon-moon"></i>
+                        <i class="fas fa-sun icon-sun"></i>
+                    </button>
+                    <div class="user-menu">
+                        <button class="user-btn" id="userBtn">
+                            <span class="user-avatar" id="userAvatar">?</span>
+                            <span id="userNameShort">User</span>
+                            <i class="fas fa-chevron-down" style="font-size:.6rem"></i>
+                        </button>
+                        <div class="user-dropdown" id="userDropdown">
+                            <div class="udh">
+                                <div class="udn"><span id="udName">User</span><span class="role-badge user" id="udRole">user</span></div>
+                                <div class="ude" id="udEmail">-</div>
+                            </div>
+                            <button class="udi danger" id="btnLogout"><i class="fas fa-right-from-bracket"></i> Keluar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="main-container">
+            <div class="main-tabs">
+                <button class="main-tab active" data-tab="orders"><i class="fas fa-boxes-stacked"></i> Order <span class="tab-count" id="tabCountOrders">0</span></button>
+                <button class="main-tab" data-tab="riwayat"><i class="fas fa-clock-rotate-left"></i> Riwayat</button>
+                <button class="main-tab" data-tab="tracking"><i class="fas fa-truck-fast"></i> Tracking Lion Parcel</button>
+            </div>
+
+            <!-- ===== TAB: ORDERS ===== -->
+            <section class="tab-panel active" id="tab-orders">
+                <div class="stats-row">
+                    <div class="stat-card"><div class="stat-icon total"><i class="fas fa-boxes-stacked"></i></div><div><div class="stat-value" id="statTotal">0</div><div class="stat-label">Total Order</div></div></div>
+                    <div class="stat-card"><div class="stat-icon pending"><i class="fas fa-hourglass-start"></i></div><div><div class="stat-value" id="statPending">0</div><div class="stat-label">Pending</div></div></div>
+                    <div class="stat-card"><div class="stat-icon proses"><i class="fas fa-gears"></i></div><div><div class="stat-value" id="statProses">0</div><div class="stat-label">Proses</div></div></div>
+                    <div class="stat-card"><div class="stat-icon ready"><i class="fas fa-circle-check"></i></div><div><div class="stat-value" id="statReady">0</div><div class="stat-label">Ready</div></div></div>
+                </div>
+
+                <div class="form-card">
+                    <div class="form-section-title"><i class="fas fa-plus"></i> Order Baru</div>
+                    <form id="formOrder">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label">No. STT <span class="required">*</span></label>
+                                <input class="form-input mono" id="ordStt" placeholder="LGC0000123456" required />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nama Komponen <span class="required">*</span></label>
+                                <input class="form-input" id="ordKomponen" placeholder="cth: Mainboard Laptop" required />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Teknisi</label>
+                                <input class="form-input" id="ordTeknisi" list="teknisiList" placeholder="cth: Pak Andi" />
+                                <datalist id="teknisiList"></datalist>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="ordStatus">
+                                    <option value="pending">PENDING</option>
+                                    <option value="proses">PROSES</option>
+                                    <option value="ready">READY</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label class="form-label">Catatan</label>
+                                <textarea class="form-textarea" id="ordCatatan" placeholder="Catatan tambahan (opsional)..."></textarea>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" type="submit"><i class="fas fa-plus"></i> Tambah Order</button>
+                    </form>
+                </div>
+
+                <div class="filter-teknisi-bar" id="chipsWrap"></div>
+
+                <div class="table-card">
+                    <div class="table-toolbar">
+                        <h2><i class="fas fa-boxes-stacked"></i> Daftar Order</h2>
+                        <div class="toolbar-right">
+                            <div class="toolbar-search">
+                                <i class="fas fa-magnifying-glass"></i>
+                                <input id="orderSearchInput" type="text" placeholder="Cari STT / komponen / teknisi..." />
+                            </div>
+                            <button class="btn btn-download btn-sm" id="btnExport"><i class="fas fa-file-excel"></i> Export Excel</button>
+                        </div>
+                    </div>
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>No. STT</th><th>Komponen</th><th>Teknisi</th>
+                                    <th>Status</th><th>Dibuat</th><th style="text-align:right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== TAB: RIWAYAT ===== -->
+            <section class="tab-panel" id="tab-riwayat">
+                <div class="riwayat-stats">
+                    <div class="riwayat-stat"><div class="rs-icon"><i class="fas fa-list-check"></i></div><div><div class="rs-val" id="rsTotal">0</div><div class="rs-lbl">Total Aktivitas</div></div></div>
+                    <div class="riwayat-stat"><div class="rs-icon"><i class="fas fa-calendar-day"></i></div><div><div class="rs-val" id="rsToday">0</div><div class="rs-lbl">Hari Ini</div></div></div>
+                    <div class="riwayat-stat"><div class="rs-icon"><i class="fas fa-boxes-stacked"></i></div><div><div class="rs-val" id="rsOrders">0</div><div class="rs-lbl">Order Aktif</div></div></div>
+                </div>
+                <div class="table-card">
+                    <div class="table-toolbar"><h2><i class="fas fa-clock-rotate-left"></i> Log Aktivitas</h2></div>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>Waktu</th><th>User</th><th>Aktivitas</th><th>STT</th><th>Detail</th></tr></thead>
+                            <tbody id="logTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== TAB: TRACKING LION PARCEL ===== -->
+            <section class="tab-panel" id="tab-tracking">
+                <div class="tracking-hero">
+                    <h2><i class="fas fa-truck-fast"></i> Lacak Kiriman Lion Parcel</h2>
+                    <p>Masukkan nomor STT, No. Ref Eksternal, atau Shipment ID &nbsp;•&nbsp; <span class="mono" style="font-size:.68rem">GET /v3/stt/track?q=</span></p>
+                </div>
+
+                <div class="tracking-search-card">
+                    <div class="tracking-input-wrap">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <input id="lpTrackInput" type="text" placeholder="Contoh: LGC0000123456" autocomplete="off" />
+                    </div>
+                    <button class="btn btn-primary" id="lpTrackBtn"><i class="fas fa-location-crosshairs"></i> Lacak</button>
+                </div>
+
+                <div id="lpRecentWrap" class="lp-recent"></div>
+                <div id="lpResult"><div class="lp-empty">Masukkan nomor resi untuk mulai melacak kiriman</div></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="toastWrap"></div>
+
+<script>
+/* ================================================================
+   ORDER KOMPONEN SYSTEM + LION PARCEL TRACKING (v3/stt/track)
+   ================================================================ */
+
+/* ---------- CONFIG API LION PARCEL ---------- */
+const LP_CONFIG = {
+    BASE_URL: 'https://api-stg-middleware.thelionparcel.com/v3',
+    TOKEN: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjI0MTYxMTc4MzAsImlhdCI6MTc4NTM5NzgzMCwidXNlcm5hbWUiOiJCT09LSU5HQVBJQ09SUERVQUJFTEFTIiwiY2xpZW50X2NvZGUiOiJDTDQzNDU5IiwiY2xpZW50X2NvZGVfZ2VuZXNpcyI6IkNMNDM0NTkiLCJpbnRlZ3JhdGlvbl90b2tlbl9pZCI6NTMsInNob3BfZG9tYWluIjoiYm9va2luZ2FwaS5jb20iLCJwbGF0Zm9ybSI6IkFQSSBMaW9uIFBhcmNlbCJ9.At7BM4uqQWpWgJ6u-xqygXQ0fO3VcPruNMNLBobUORWVyfxr63KCOgWt9cbzOK-4ikdNmd-R7Np2oC0SdLifXLWjTfWhz2wQS7aITK0YjOMkBtrCsqWHG8xsK8MiXJheko4w8C9vn4vATMI7BDL1iySw8uXbpICiU7k8TvgF4U-uxsOZlIvfEva5S17ZGeGRYTik9qjIst7Aq8IlJBww3meEl9znlNkdyuFgLZg_cUU1Jc6o5-5fUkljHelDyFuPuDm3KEDuds3ov0YKTi1EYQu266KzTXdhgWtyf6-98RHQlbic6o_RZ4KeNb6YrtC63AHHLonmkrmUGH7TdH09sQ',
+    TIMEOUT: 30000,
+    PROXY: '' // isi prefix proxy bila kena CORS, contoh: 'https://corsproxy.io/?url='
+};
+
+/* ---------- STORAGE ---------- */
+const LS = {
+    users: 'oks_users_v1', session: 'oks_session_v1', theme: 'oks_theme_v1',
+    orders: 'oks_orders_v1', log: 'oks_log_v1', recent: 'lp_recent_tracks_v1'
+};
+const $  = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = t => {
+    if (!t) return '-';
+    const d = new Date(t); if (isNaN(d)) return String(t);
+    return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+const jget = (k, f) => { try { return JSON.parse(localStorage.getItem(k)) ?? f; } catch { return f; } };
+const jset = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+/* ---------- TOAST ---------- */
+function showToast(msg, type = 'info') {
+    const icons = { success: 'fa-circle-check', danger: 'fa-circle-xmark', warning: 'fa-triangle-exclamation', info: 'fa-circle-info' };
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i><span>${esc(msg)}</span>`;
+    $('#toastWrap').appendChild(el);
+    setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 320); }, 3200);
+}
+
+/* ---------- THEME ---------- */
+function applyTheme(t) { document.documentElement.setAttribute('data-theme', t); jset(LS.theme, t); }
+
+/* ---------- AUTH (lokal — bisa diganti Firebase) ---------- */
+let session = null;
+function seedUsers() {
+    if (!localStorage.getItem(LS.users)) {
+        jset(LS.users, [{ id: 'u1', name: 'Administrator', email: 'admin@oks.id', pass: 'admin123', role: 'admin' }]);
+    }
+}
+const getUsers = () => jget(LS.users, []);
+function showErr(id, msg) { const b = $(id); b.querySelector('span').textContent = msg; b.classList.add('show'); }
+function hideErr(id) { $(id).classList.remove('show'); }
+
+function pwScore(p) {
+    let s = 0;
+    if (p.length >= 6) s++; if (p.length >= 10) s++;
+    if (/[A-Z]/.test(p) && /[a-z]/.test(p)) s++;
+    if (/\d/.test(p)) s++; if (/[^A-Za-z0-9]/.test(p)) s++;
+    return Math.min(s, 4);
+}
+
+function enterApp(user) {
+    session = user;
+    jset(LS.session, { id: user.id, name: user.name, email: user.email, role: user.role });
+    $('#authScreen').classList.add('hidden');
+    $('#appWrapper').classList.add('visible');
+    const ini = user.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    $('#userAvatar').textContent = ini;
+    $('#userNameShort').textContent = user.name.split(' ')[0];
+    $('#udName').textContent = user.name;
+    $('#udEmail').textContent = user.email;
+    const rb = $('#udRole');
+    rb.textContent = user.role; rb.className = 'role-badge ' + (user.role === 'admin' ? 'admin' : 'user');
+    $('#btnResetData')?.style.setProperty('display', user.role === 'admin' ? 'flex' : 'none');
+    renderAll(); touchSync();
+}
+
+function logout() {
+    localStorage.removeItem(LS.session); session = null;
+    $('#appWrapper').classList.remove('visible');
+    $('#authScreen').classList.remove('hidden');
+    $('#liPass').value = ''; $('#formLogin').querySelector('.aerr').classList.remove('show');
+    showToast('Anda telah keluar', 'info');
+}
+
+/* ---------- TABS ---------- */
+function switchTab(id) {
+    $$('.main-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+    $$('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + id));
+}
+
+/* ---------- SYNC INDICATOR ---------- */
+function touchSync() { $('#lastSync').textContent = 'Terakhir sync: ' + new Date().toLocaleTimeString('id-ID'); }
+
+/* ---------- ORDERS ---------- */
+let orders = jget(LS.orders, []);
+let log = jget(LS.log, []);
+let activeTeknisi = '';
+let orderSearch = '';
+
+const saveOrders = () => { jset(LS.orders, orders); };
+const saveLog = () => { jset(LS.log, log.slice(0, 200)); };
+function addLog(action, stt, detail) {
+    log.unshift({ id: uid(), time: Date.now(), user: session?.name || '-', action, stt, detail });
+    saveLog(); renderLog();
+}
+
+function filteredOrders() {
+    const q = orderSearch.toLowerCase();
+    return orders.filter(o =>
+        (!activeTeknisi || o.teknisi === activeTeknisi) &&
+        (!q || `${o.stt} ${o.komponen} ${o.teknisi} ${o.catatan || ''}`.toLowerCase().includes(q))
+    );
+}
+
+function addOrder(e) {
+    e.preventDefault();
+    const stt = $('#ordStt').value.trim().toUpperCase();
+    const komponen = $('#ordKomponen').value.trim();
+    const teknisi = $('#ordTeknisi').value.trim();
+    const status = $('#ordStatus').value;
+    const catatan = $('#ordCatatan').value.trim();
+    if (!stt || !komponen) { showToast('No. STT dan Nama Komponen wajib diisi', 'warning'); return; }
+    if (orders.some(o => o.stt === stt)) { showToast(`STT ${stt} sudah terdaftar`, 'danger'); return; }
+    orders.unshift({ id: uid(), stt, komponen, teknisi, status, catatan, createdAt: Date.now() });
+    saveOrders(); addLog('ORDER BARU', stt, komponen);
+    e.target.reset(); renderOrders(); renderChips(); renderLog(); touchSync();
+    showToast(`Order ${stt} ditambahkan ✓`, 'success');
+}
+
+function setStatus(id, status) {
+    const o = orders.find(x => x.id === id); if (!o || o.status === status) return renderOrders();
+    const old = o.status; o.status = status; o.updatedAt = Date.now();
+    saveOrders(); addLog('STATUS', o.stt, `${old.toUpperCase()} → ${status.toUpperCase()}`);
+    renderOrders(); touchSync(); showToast(`${o.stt}: ${status.toUpperCase()}`, 'info');
+}
+
+function delOrder(id) {
+    const o = orders.find(x => x.id === id); if (!o) return;
+    if (!confirm(`Hapus order ${o.stt} (${o.komponen})?`)) return;
+    orders = orders.filter(x => x.id !== id);
+    if (activeTeknisi && !orders.some(x => x.teknisi === activeTeknisi)) activeTeknisi = '';
+    saveOrders(); addLog('HAPUS', o.stt, o.komponen);
+    renderOrders(); renderChips(); touchSync(); showToast(`Order ${o.stt} dihapus`, 'danger');
+}
+
+function renderOrders() {
+    const list = filteredOrders();
+    $('#tabCountOrders').textContent = orders.length;
+    $('#statTotal').textContent = orders.length;
+    $('#statPending').textContent = orders.filter(o => o.status === 'pending').length;
+    $('#statProses').textContent = orders.filter(o => o.status === 'proses').length;
+    $('#statReady').textContent = orders.filter(o => o.status === 'ready').length;
+    $('#ordersTableBody').innerHTML = list.length ? list.map(o => `
+        <tr>
+            <td class="mono">${esc(o.stt)}</td>
+            <td>${esc(o.komponen)}${o.catatan ? `<div class="cell-sub" title="${esc(o.catatan)}">${esc(o.catatan)}</div>` : ''}</td>
+            <td>${esc(o.teknisi || '-')}</td>
+            <td><select class="status-select st-${o.status}" data-id="${o.id}">
+                ${['pending','proses','ready'].map(s => `<option value="${s}" ${o.status === s ? 'selected' : ''}>${s.toUpperCase()}</option>`).join('')}
+            </select></td>
+            <td class="mono td-time">${fmtDate(o.createdAt)}</td>
+            <td><div class="row-actions" style="justify-content:flex-end">
+                <button class="action-btn" data-act="track" data-id="${o.id}" title="Lacak STT ini"><i class="fas fa-truck-fast"></i></button>
+                <button class="action-btn danger" data-act="del" data-id="${o.id}" title="Hapus"><i class="fas fa-trash-can"></i></button>
+            </div></td>
+        </tr>`).join('')
+    : `<tr><td colspan="6" class="empty-row"><i class="fas fa-inbox"></i>Tidak ada order yang cocok</td></tr>`;
+}
+
+function renderChips() {
+    const teks = {};
+    orders.forEach(o => { if (o.teknisi) teks[o.teknisi] = (teks[o.teknisi] || 0) + 1; });
+    const entries = Object.entries(teks).sort((a, b) => b[1] - a[1]);
+    $('#teknisiList').innerHTML = entries.map(([t]) => `<option value="${esc(t)}">`).join('');
+    $('#chipsWrap').innerHTML =
+        `<span class="filter-label"><i class="fas fa-filter"></i> Teknisi <span class="count-badge">${entries.length}</span></span>` +
+        `<button class="filter-teknisi-chip clear-filter ${!activeTeknisi ? 'active' : ''}" data-tek="">Semua <span class="chip-count">${orders.length}</span></button>` +
+        entries.map(([t, c]) => `<button class="filter-teknisi-chip ${activeTeknisi === t ? 'active' : ''}" data-tek="${esc(t)}">${esc(t)} <span class="chip-count">${c}</span></button>`).join('');
+}
+
+function renderLog() {
+    $('#rsTotal').textContent = log.length;
+    const today = new Date().toDateString();
+    $('#rsToday').textContent = log.filter(l => new Date(l.time).toDateString() === today).length;
+    $('#rsOrders').textContent = orders.length;
+    const cls = { 'ORDER BARU': 'act-new', 'STATUS': 'act-status', 'HAPUS': 'act-del' };
+    $('#logTableBody').innerHTML = log.length ? log.map(l => `
+        <tr>
+            <td class="mono td-time">${fmtDate(l.time)}</td>
+            <td>${esc(l.user)}</td>
+            <td><span class="act-badge ${cls[l.action] || 'act-new'}">${esc(l.action)}</span></td>
+            <td class="mono">${esc(l.stt || '-')}</td>
+            <td>${esc(l.detail || '-')}</td>
+        </tr>`).join('')
+    : `<tr><td colspan="5" class="empty-row"><i class="fas fa-scroll"></i>Belum ada aktivitas</td></tr>`;
+}
+
+function exportExcel() {
+    if (typeof XLSX === 'undefined') { showToast('Library Excel belum termuat', 'warning'); return; }
+    const data = filteredOrders().map((o, i) => ({
+        'No': i + 1, 'No STT': o.stt, 'Komponen': o.komponen, 'Teknisi': o.teknisi || '-',
+        'Status': o.status.toUpperCase(), 'Catatan': o.catatan || '-', 'Dibuat': fmtDate(o.createdAt)
+    }));
+    if (!data.length) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'Orders');
+    XLSX.writeFile(wb, `order-komponen-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast('Excel berhasil diunduh ✓', 'success');
+}
+
+function renderAll() { renderOrders(); renderChips(); renderLog(); }
+
+/* ================================================================
+   LION PARCEL TRACKING API — GET /v3/stt/track?q={...}
+   ================================================================ */
+const LionParcel = {
+    async track(query) {
+        const endpoint = `${LP_CONFIG.BASE_URL}/stt/track?q=${encodeURIComponent(query)}`;
+        const url = LP_CONFIG.PROXY ? LP_CONFIG.PROXY + encodeURIComponent(endpoint) : endpoint;
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), LP_CONFIG.TIMEOUT);
+        try {
+            const res = await fetch(url, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${LP_CONFIG.TOKEN}`, 'Accept': 'application/json' },
+                signal: ctrl.signal
+            });
+            if (res.status === 401 || res.status === 403) { const e = new Error('Token tidak valid / kedaluwarsa. Perbarui LP_CONFIG.TOKEN.'); e.code = 'AUTH'; throw e; }
+            if (res.status === 404) { const e = new Error(`Nomor "${query}" tidak ditemukan.`); e.code = 'NOT_FOUND'; throw e; }
+            if (!res.ok) {
+                const body = await res.text().catch(() => '');
+                const e = new Error(`Server error ${res.status}. ${body.slice(0, 150)}`); e.code = 'SERVER'; throw e;
+            }
+            return await res.json();
+        } catch (err) {
+            if (err.name === 'AbortError') { const e = new Error('Request timeout (30 dtk). Coba lagi.'); e.code = 'TIMEOUT'; throw e; }
+            if (!err.code) { err.message = 'Gagal terhubung ke server (kemungkinan CORS / jaringan).'; err.code = 'NETWORK'; }
+            throw err;
+        } finally { clearTimeout(timer); }
+    }
+};
+
+function lpNormalize(data) {
+    const root = data?.data ?? data?.result ?? data ?? {};
+    const pick = (obj, keys) => { for (const k of keys) if (obj?.[k] != null && obj[k] !== '') return obj[k]; return ''; };
+    return {
+        sttNo: pick(root, ['stt_no', 'no_stt', 'sttNumber', 'awb_no', 'tracking_number']),
+        noRef: pick(root, ['no_ref_external', 'ref_external', 'no_ref', 'external_ref']),
+        shipmentId: pick(root, ['shipment_id', 'shipmentId']),
+        status: pick(root, ['stt_status', 'status', 'last_status', 'sttStatus']),
+        service: pick(root, ['service_code', 'service_type', 'service', 'product_code']),
+        sender: pick(root, ['shipper_name', 'sender_name', 'sender', 'shipper']),
+        receiver: pick(root, ['consignee_name', 'receiver_name', 'receiver', 'consignee']),
+        origin: pick(root, ['origin', 'origin_city', 'from']),
+        destination: pick(root, ['destination', 'destination_city', 'to']),
+        weight: pick(root, ['total_weight', 'weight', 'berat']),
+        piece: pick(root, ['total_piece', 'piece', 'koli', 'qty']),
+        history: (root.history || root.tracking_history || root.stt_history || root.logs || []).map(h => ({
+            time: pick(h, ['created_at', 'date', 'datetime', 'timestamp', 'time', 'status_date']),
+            desc: pick(h, ['description', 'status', 'status_desc', 'remarks', 'remark', 'action']),
+            location: pick(h, ['location', 'city', 'station', 'branch', 'area'])
+        })),
+        raw: data
+    };
+}
+
+function lpStatusClass(status) {
+    const s = String(status).toUpperCase();
+    if (/DELIVER|POD|RECEIV|SELESAI|TERKIRIM|DITERIMA/.test(s)) return 'success';
+    if (/RETURN|CANCEL|UNDELIV|GAGAL|KEMBALI|PROBLEM|HOLD|LOST/.test(s)) return 'danger';
+    if (/TRANSIT|PROCESS|PICKUP|MANIFEST|DEPART|ARRIVE|LOAD|FLY|COURIER|IN_TAKE/.test(s)) return 'warning';
+    if (/BOOK|CREATE|REQUEST|ORDER/.test(s)) return 'info';
+    return 'muted';
+}
+
+function lpGetRecent() { return jget(LS.recent, []); }
+function lpSaveRecent(q) {
+    const list = lpGetRecent().filter(x => x !== q);
+    list.unshift(q); jset(LS.recent, list.slice(0, 8)); lpRenderRecent();
+}
+function lpRenderRecent() {
+    const list = lpGetRecent(); const wrap = $('#lpRecentWrap');
+    if (!list.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = `<span class="lbl"><i class="fas fa-clock-rotate-left"></i> Terakhir:</span>` +
+        list.map(q => `<button class="chip" data-q="${esc(q)}">${esc(q)}</button>`).join('');
+    wrap.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+        $('#lpTrackInput').value = b.dataset.q; lpDoTrack();
+    }));
+}
+
+function lpRenderError(err) {
+    $('#lpResult').innerHTML = `
+        <div class="lp-error">
+            <i class="fas fa-triangle-exclamation"></i>
+            <div>
+                <strong>Gagal Melacak</strong>
+                <p>${esc(err.message)}</p>
+                ${err.code === 'NETWORK' ? '<small>Jika terus terjadi, isi LP_CONFIG.PROXY dengan prefix proxy CORS.</small>' : ''}
+            </div>
+        </div>`;
+}
+
+function lpRender(d) {
+    const badgeCls = lpStatusClass(d.status);
+    const historyHtml = d.history.length
+        ? d.history.map((h, i) => `
+            <div class="lp-tl-item ${i === 0 ? 'latest' : ''}">
+                <span class="lp-tl-dot"></span>
+                <div class="lp-tl-time">${esc(fmtDate(h.time))}</div>
+                <div class="lp-tl-desc">${esc(h.desc || '-')}</div>
+                ${h.location ? `<div class="lp-tl-loc"><i class="fas fa-location-dot"></i>${esc(h.location)}</div>` : ''}
+            </div>`).join('')
+        : `<div class="lp-empty">Riwayat perjalanan tidak tersedia</div>`;
+    const det = (lbl, val) => val ? `<div class="lp-detail-item"><div class="lbl">${lbl}</div><div class="val">${esc(val)}</div></div>` : '';
+
+    $('#lpResult').innerHTML = `
+        <div class="lp-result-card">
+            <div class="lp-result-head">
+                <span class="stt">${esc(d.sttNo || '-')}</span>
+                <span class="lp-badge ${badgeCls}"><i class="fas fa-circle" style="font-size:6px"></i> ${esc(d.status || 'UNKNOWN')}</span>
+            </div>
+            <div class="lp-detail-grid">
+                ${det('No. Ref Eksternal', d.noRef)}
+                ${det('Shipment ID', d.shipmentId)}
+                ${det('Layanan', d.service)}
+                ${det('Pengirim', d.sender)}
+                ${det('Penerima', d.receiver)}
+                ${det('Rute', d.origin && d.destination ? `${d.origin} → ${d.destination}` : (d.origin || d.destination))}
+                ${det('Berat', d.weight)}
+                ${det('Koli', d.piece)}
+            </div>
+            <div class="form-section-title"><i class="fas fa-route"></i> Riwayat Perjalanan</div>
+            <div class="lp-timeline">${historyHtml}</div>
+            <div class="lp-actions">
+                <button class="btn btn-secondary btn-sm" id="lpCopyBtn"><i class="fas fa-copy"></i> Copy Hasil</button>
+                <button class="btn btn-secondary btn-sm" id="lpRefreshBtn"><i class="fas fa-rotate"></i> Refresh</button>
+            </div>
+            <div class="lp-raw"><details><summary>Lihat raw JSON</summary><pre>${esc(JSON.stringify(d.raw, null, 2))}</pre></details></div>
+        </div>`;
+
+    $('#lpCopyBtn').addEventListener('click', () => lpCopyResult(d));
+    $('#lpRefreshBtn').addEventListener('click', () => lpDoTrack());
+    touchSync();
+}
+
+function lpBuildCopyText(d) {
+    const lines = ['*TRACKING LION PARCEL*', `STT: ${d.sttNo || '-'}`];
+    if (d.noRef) lines.push(`No. Ref: ${d.noRef}`);
+    if (d.shipmentId) lines.push(`Shipment ID: ${d.shipmentId}`);
+    if (d.service) lines.push(`Layanan: ${d.service}`);
+    if (d.origin || d.destination) lines.push(`Rute: ${d.origin || '?'} → ${d.destination || '?'}`);
+    lines.push(`Status: ${d.status || '-'}`, '', '*Riwayat:*');
+    [...d.history].reverse().forEach((h, i) =>
+        lines.push(`${i + 1}. ${fmtDate(h.time)} — ${h.desc || '-'}${h.location ? ' (' + h.location + ')' : ''}`));
+    return lines.join('\n');
+}
+
+function lpCopyResult(d) {
+    navigator.clipboard.writeText(lpBuildCopyText(d))
+        .then(() => showToast('Hasil tracking dikopi ✓', 'success'))
+        .catch(() => showToast('Gagal mengopi', 'danger'));
+}
+
+let _lpLastQuery = '';
+async function lpDoTrack() {
+    const input = $('#lpTrackInput'), btn = $('#lpTrackBtn');
+    const q = (input.value || '').trim();
+    if (!q) { showToast('Masukkan nomor STT / No. Ref / Shipment ID', 'warning'); input.focus(); return; }
+    _lpLastQuery = q;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Melacak...';
+    $('#lpResult').innerHTML = `<div class="lp-empty"><i class="fas fa-circle-notch fa-spin"></i> Mengambil data tracking...</div>`;
+    try {
+        const res = await LionParcel.track(q);
+        const d = lpNormalize(res);
+        lpSaveRecent(q); lpRender(d);
+    } catch (err) { lpRenderError(err); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-location-crosshairs"></i> Lacak'; }
+}
+
+/* Panggil dari mana saja — mis. tombol di baris order: lpTrackNow('STT123456') */
+window.lpTrackNow = function (query) {
+    switchTab('tracking');
+    $('#lpTrackInput').value = query;
+    lpDoTrack();
+};
+window.LionParcel = LionParcel;
+
+/* ================================================================
+   INIT & WIRING
+   ================================================================ */
+(function init() {
+    // Tema
+    applyTheme(jget(LS.theme, 'dark'));
+    $('#themeToggle').addEventListener('click', () => {
+        applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+
+    // Auth: seed + tab switch
+    seedUsers();
+    $$('.auth-tab').forEach(t => t.addEventListener('click', () => {
+        $$('.auth-tab').forEach(x => x.classList.toggle('active', x === t));
+        $('#formLogin').classList.toggle('active', t.dataset.auth === 'login');
+        $('#formRegister').classList.toggle('active', t.dataset.auth === 'register');
+    }));
+    $$('[data-goto]').forEach(a => a.addEventListener('click', () =>
+        $(`.auth-tab[data-auth="${a.dataset.goto}"]`).click()));
+
+    // Show/hide password
+    $$('.tpw').forEach(b => b.addEventListener('click', () => {
+        const i = document.getElementById(b.dataset.target);
+        const show = i.type === 'password';
+        i.type = show ? 'text' : 'password';
+        b.innerHTML = `<i class="fas ${show ? 'fa-eye-slash' : 'fa-eye'}"></i>`;
+    }));
+
+    // Strength meter
+    $('#rgPass').addEventListener('input', e => {
+        const s = pwScore(e.target.value);
+        const map = [
+            ['0%', '', ''], ['25%', 'var(--danger)', 'Lemah'],
+            ['50%', 'var(--warning)', 'Sedang'], ['75%', '#fbbf24', 'Bagus'], ['100%', 'var(--success)', 'Kuat']
+        ][s];
+        $('#pwBar').style.width = map[0]; $('#pwBar').style.background = map[1]; $('#pwText').textContent = map[2];
+    });
+
+    // Login
+    $('#formLogin').addEventListener('submit', e => {
+        e.preventDefault(); hideErr('#loginErr');
+        const email = $('#liEmail').value.trim().toLowerCase();
+        const pass = $('#liPass').value;
+        const u = getUsers().find(x => x.email.toLowerCase() === email && x.pass === pass);
+        if (!u) { showErr('#loginErr', 'Email atau password salah.'); return; }
+        enterApp(u); showToast(`Selamat datang, ${u.name}!`, 'success');
+    });
+
+    // Register
+    $('#formRegister').addEventListener('submit', e => {
+        e.preventDefault(); hideErr('#regErr');
+        const name = $('#rgName').value.trim();
+        const email = $('#rgEmail').value.trim().toLowerCase();
+        const pass = $('#rgPass').value;
+        if (pass.length < 6) { showErr('#regErr', 'Password minimal 6 karakter.'); return; }
+        const users = getUsers();
+        if (users.some(u => u.email.toLowerCase() === email)) { showErr('#regErr', 'Email sudah terdaftar.'); return; }
+        const u = { id: uid(), name, email, pass, role: 'user' };
+        users.push(u); jset(LS.users, users);
+        enterApp(u); showToast('Akun berhasil dibuat ✓', 'success');
+    });
+
+    // Session restore
+    const saved = jget(LS.session, null);
+    if (saved) { const u = getUsers().find(x => x.id === saved.id); if (u) enterApp(u); }
+
+    // User menu
+    $('#userBtn').addEventListener('click', e => { e.stopPropagation(); $('#userDropdown').classList.toggle('show'); });
+    document.addEventListener('click', e => { if (!e.target.closest('.user-menu')) $('#userDropdown').classList.remove('show'); });
+    $('#btnLogout').addEventListener('click', logout);
+
+    // Tabs
+    $$('.main-tab').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+    // Orders
+    $('#formOrder').addEventListener('submit', addOrder);
+    $('#orderSearchInput').addEventListener('input', e => { orderSearch = e.target.value; renderOrders(); });
+    $('#btnExport').addEventListener('click', exportExcel);
+    $('#chipsWrap').addEventListener('click', e => {
+        const c = e.target.closest('.filter-teknisi-chip'); if (!c) return;
+        activeTeknisi = c.dataset.tek; renderChips(); renderOrders();
+    });
+    $('#ordersTableBody').addEventListener('change', e => {
+        if (e.target.matches('.status-select')) setStatus(e.target.dataset.id, e.target.value);
+    });
+    $('#ordersTableBody').addEventListener('click', e => {
+        const b = e.target.closest('.action-btn'); if (!b) return;
+        if (b.dataset.act === 'del') delOrder(b.dataset.id);
+        if (b.dataset.act === 'track') {
+            const o = orders.find(x => x.id === b.dataset.id);
+            if (o) lpTrackNow(o.stt);
+        }
+    });
+
+    // Tracking
+    $('#lpTrackBtn').addEventListener('click', lpDoTrack);
+    $('#lpTrackInput').addEventListener('keydown', e => { if (e.key === 'Enter') lpDoTrack(); });
+    lpRenderRecent();
+})();
+</script>
+</body>
+</html>

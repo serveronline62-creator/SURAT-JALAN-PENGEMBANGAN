@@ -78,7 +78,6 @@
   .chk{display:flex;align-items:center;gap:7px;font-size:12.5px;color:#334155;user-select:none;cursor:pointer}
   .chk input{width:16px;height:16px;accent-color:var(--brand)}
 
-  /* info banner */
   .info{
     display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:10px;
     font-size:12.5px;line-height:1.5;margin-top:14px;
@@ -123,7 +122,15 @@
 
   <header class="top">
     <h1>Filter &amp; Extract Excel — TAP 1 / TAP 2</h1>
-    <p>Kolom <b>Part</b>, <b>Deskripsi</b>, dan kolom tambahan dari sheet <b>Detail</b> otomatis ditampilkan.</p>
+    <p>
+      Kolom <b>Part</b>, <b>Deskripsi</b>, dan kolom tambahan dari sheet <b>Detail</b> otomatis ditampilkan.
+      Kolom <b>Nomor Referensi</b> dan <b>Lokasi Tujuan</b> diambil dari sheet <b>Goods Transaction</b>
+      (kolom <b>Referensi</b> dan <b>Lokasi Sampai</b>).
+      Kolom <b>Status</b> diambil dari kolom <b>Status</b>,
+      kolom <b>Dibuat Pada</b> dan <b>Dikonfirmasi Pada</b> di-copy dari kolom <b>Diupdate Tanggal</b>
+      pada sheet <b>Goods Transaction</b>.
+      Kolom <b>Diubah Oleh</b> dan <b>Diubah Pada</b> otomatis diisi dari <b>Dibuat Oleh</b> dan <b>Dibuat Pada</b> bila kosong.
+    </p>
   </header>
 
   <div class="tabs" id="tabsBar"></div>
@@ -152,6 +159,39 @@ const TAP2_COLUMNS = [
   "Dikonfirmasi Oleh","Dikonfirmasi Pada","Diubah Oleh","Diubah Pada"
 ];
 
+/* -------------------------------------------------------------------------
+   DAFTAR KOLOM YANG DIHAPUS / TIDAK DITAMPILKAN (khusus TAP 2)
+   ------------------------------------------------------------------------- */
+const TAP2_EXCLUDED_COLUMNS = [
+  "Tipe Cetak",
+  "Um",
+  "Qty Konversi",
+  "UM Konversi",
+  "Nilai Konversi",
+  "Qty Alt Konversi",
+  "Qty Reference",
+  "Lokasi Dari",
+  "Site Dari",
+  "NIK Dari",
+  "Nama Dari",
+  "Kode Gudang Dari",
+  "Lokasi Sampai",
+  "Site Sampai",
+  "NIK Sampai",
+  "Nama Sampai",
+  "Kode Gudang Sampai",
+  "DPP / Unit",
+  "Total DPP",
+  "Total PPN",
+  "Total DPP + PPN",
+  "No. Aktiva",
+  "Remarks 1",
+  "Remarks 2",
+  "Diupdate Oleh",
+  "Diupdate Tanggal",
+  "Diupdate Pada"
+];
+
 const NUMERIC_COLS = new Set([
   "No","Baris","Qty","Conversion Qty","Conversion Value","Price Per Unit","Total Value"
 ]);
@@ -161,6 +201,18 @@ const TEXT_COLS = new Set([
   "Tipe Transaksi","Status","Part","Deskripsi","Satuan","Conversion UM",
   "Mata Uang","Site Parent","Dibuat Oleh","Dikonfirmasi Oleh","Diubah Oleh"
 ]);
+
+/* Alias kolom pada sheet utama */
+const MAIN_COL_ALIASES = {
+  "Nomor Referensi": [
+    "Nomor Referensi","No Referensi","Nomer Referensi","Nomor Ref",
+    "Referensi","Reference","Ref No","Ref No.","Ref"
+  ],
+  "Lokasi Tujuan": [
+    "Lokasi Tujuan","Lokasi Sampai","Lokasi Tujuan/Sampai",
+    "Destination","Tujuan"
+  ]
+};
 
 /* Alias nama kolom (untuk deteksi otomatis di sheet Detail) */
 const COL_ALIASES = {
@@ -172,6 +224,17 @@ const COL_ALIASES = {
   no: ["no","nomor","no urut","no_urut"]
 };
 
+/* Alias nama kolom khusus sheet "Goods Transaction" */
+const GT_ALIASES = {
+  ref:    ["nomor referensi","no referensi","noreferensi","referensi","reference","ref no","ref no.","ref"],
+  lokasi: ["lokasi sampai","lokasi tujuan","lokasi tujuan/sampai","tujuan","destination","lokasi"],
+  status: ["status"],
+  diupdateTanggal: [
+    "diupdate tanggal","diupdate tgl","diupdate pada","diubah pada",
+    "update tanggal","update date","tgl update"
+  ]
+};
+
 const MAX_PREVIEW_ROWS = 800;
 
 const TAB_CONFIGS = {
@@ -179,19 +242,21 @@ const TAB_CONFIGS = {
     label: "TAP 1",
     badge: "ASA19",
     exportTag: "TAP1",
-    sheetPreferred: /tap\s*1/i,
+    sheetPreference: [/tap\s*1/i, /goods\s*transaction/i, /goods/i, /transaksi\s*barang/i],
     columns: TAP1_COLUMNS,
     dateFormat: "dmy",
-    defaultBlankRows: false
+    defaultBlankRows: false,
+    excludedDetailColumns: []
   },
   tap2: {
     label: "TAP 2",
     badge: "INPUT DO",
     exportTag: "TAP2",
-    sheetPreferred: /tap\s*2/i,
+    sheetPreference: [/tap\s*2/i, /goods\s*transaction/i, /goods/i, /transaksi\s*barang/i],
     columns: TAP2_COLUMNS,
     dateFormat: "dmy",
-    defaultBlankRows: true
+    defaultBlankRows: true,
+    excludedDetailColumns: TAP2_EXCLUDED_COLUMNS
   }
 };
 
@@ -259,7 +324,6 @@ function toast(msg){
   toastTm = setTimeout(() => t.classList.remove("show"), 2800);
 }
 
-/** Cari index kolom dari daftar alias. */
 function findColumnIndex(headers, aliases){
   const H = headers.map(norm);
   for (const a of aliases){ if (H.includes(a)) return H.indexOf(a); }
@@ -268,6 +332,14 @@ function findColumnIndex(headers, aliases){
     if (i !== -1) return i;
   }
   return -1;
+}
+
+function findMainColumnIndex(headers, col){
+  const found = headers.findIndex(h => norm(h) === norm(col));
+  if (found !== -1) return found;
+  const aliases = MAIN_COL_ALIASES[col];
+  if (!aliases) return -1;
+  return findColumnIndex(headers, aliases.map(norm));
 }
 
 /* =========================================================================
@@ -279,8 +351,10 @@ class TabController {
     this.cfg   = cfg;
     this.state = {
       wb:null, rows:[], filtered:[], baseName:"extract", sheetName:"",
-      columns: cfg.columns.slice(),   // kolom dinamis (TAP + kolom tambahan dari Detail)
-      detailInfo: null
+      columns: cfg.columns.slice(),
+      detailInfo: null,
+      gtInfo: null,
+      autoFillInfo: null
     };
     this.mount();
     this.bind();
@@ -301,7 +375,10 @@ class TabController {
         <h2>1. Unggah File Excel — ${cfg.label}</h2>
         <p class="sub">
           Format <code>.xlsx</code> / <code>.xls</code> / <code>.csv</code>.
-          Kolom <b>Part</b>, <b>Deskripsi</b>, dan kolom tambahan akan dilengkapi otomatis dari sheet <b>Detail</b> jika tersedia.
+          Kolom <b>Part</b>, <b>Deskripsi</b>, dan kolom tambahan akan dilengkapi otomatis dari sheet <b>Detail</b>.
+          Kolom <b>Nomor Referensi</b>, <b>Lokasi Tujuan</b>, <b>Status</b>, <b>Dibuat Pada</b>, dan <b>Dikonfirmasi Pada</b>
+          akan dilengkapi dari sheet <b>Goods Transaction</b>.
+          Kolom <b>Diubah Oleh</b> / <b>Diubah Pada</b> otomatis diisi dari <b>Dibuat Oleh</b> / <b>Dibuat Pada</b> jika kosong.
         </p>
 
         <label class="drop" id="drop-${p}" for="file-${p}">
@@ -350,13 +427,14 @@ class TabController {
 
       <section class="card hidden" id="preview-${p}">
         <h2>3. Pratinjau Hasil — ${cfg.label}</h2>
-        <p class="sub">Kolom <b>Part</b>, <b>Deskripsi</b>, dan kolom tambahan dari sheet Detail sudah terisi.</p>
+        <p class="sub">Kolom <b>Part</b>, <b>Deskripsi</b>, <b>Nomor Referensi</b>, <b>Lokasi Tujuan</b>, <b>Status</b>, <b>Dibuat Pada</b>, dan <b>Dikonfirmasi Pada</b> sudah terisi dari sheet referensi.</p>
 
         <div class="stats">
           <div class="pill">Total baris: <b id="stTotal-${p}">0</b></div>
           <div class="pill">Setelah difilter: <b id="stFiltered-${p}">0</b></div>
           <div class="pill">Kolom: <b id="stCols-${p}">0</b></div>
           <div class="pill ok" id="stDetail-${p}" style="display:none">Detail match: <b>0</b></div>
+          <div class="pill ok" id="stGT-${p}" style="display:none">Goods Transaction match: <b>0</b></div>
         </div>
 
         <div class="tablebox">
@@ -421,7 +499,11 @@ class TabController {
           sel.appendChild(o);
         });
 
-        const preferred = wb.SheetNames.find(n => this.cfg.sheetPreferred.test(n));
+        let preferred = null;
+        for (const re of this.cfg.sheetPreference){
+          preferred = wb.SheetNames.find(n => re.test(n));
+          if (preferred) break;
+        }
         sel.value = preferred || wb.SheetNames[0];
 
         this.el("sheetBox").classList.remove("hidden");
@@ -435,9 +517,6 @@ class TabController {
     reader.readAsArrayBuffer(file);
   }
 
-  /* ------------------------------------------------------------------
-     Deteksi & parsing sheet Detail
-     ------------------------------------------------------------------ */
   detectDetailSheet(excludeSheetName){
     const candidates = this.state.wb.SheetNames.filter(n =>
       n !== excludeSheetName && /detail/i.test(n)
@@ -452,7 +531,6 @@ class TabController {
         header:1, raw:true, defval:null, blankrows:true
       });
 
-      /* cari baris header yang memuat kolom Part DAN Deskripsi */
       let headerIdx = -1;
       for (let i = 0; i < Math.min(aoa.length, 50); i++){
         const H = (aoa[i] || []).map(norm);
@@ -475,7 +553,6 @@ class TabController {
 
       if (idx.part === -1 && idx.desc === -1) continue;
 
-      /* bangun map lookup + simpan semua rec untuk fallback */
       const map = new Map();
       const records = [];
 
@@ -484,7 +561,7 @@ class TabController {
         if (raw.every(c => c === null || c === undefined || String(c).trim() === "")) continue;
 
         const rec = {
-          raw: raw,                  // simpan seluruh baris detail untuk merge
+          raw: raw,
           part:      idx.part   >= 0 ? String(raw[idx.part]   ?? "").trim() : "",
           deskripsi: idx.desc   >= 0 ? String(raw[idx.desc]   ?? "").trim() : "",
           doc:       idx.doc    >= 0 ? String(raw[idx.doc]    ?? "").trim() : "",
@@ -493,12 +570,10 @@ class TabController {
           no:        idx.no     >= 0 ? String(raw[idx.no]     ?? "").trim() : ""
         };
 
-        /* skip baris yang benar-benar kosong */
         if (!rec.part && !rec.deskripsi) continue;
 
         records.push(rec);
 
-        /* index dengan beberapa kunci (presisi tinggi → rendah) */
         if (rec.doc && rec.baris)   map.set(`doc:${rec.doc}|baris:${rec.baris}`, rec);
         if (rec.ref && rec.baris)   map.set(`ref:${rec.ref}|baris:${rec.baris}`, rec);
         if (rec.part && rec.baris)  map.set(`part:${rec.part}|baris:${rec.baris}`, rec);
@@ -526,7 +601,6 @@ class TabController {
     return null;
   }
 
-  /** Cari record detail untuk baris utama. */
   lookupDetail(detail, row){
     const doc   = String(row["Nomor Dokumen"] ?? "").trim();
     const ref   = String(row["Nomor Referensi"] ?? "").trim();
@@ -534,7 +608,6 @@ class TabController {
     const part  = String(row["Part"] ?? "").trim();
     const no    = String(row["No"] ?? "").trim();
 
-    /* urutan presisi: doc+baris → ref+baris → part+baris → doc → ref → no → part */
     if (doc && baris)   { const m = detail.map.get(`doc:${doc}|baris:${baris}`); if (m) return m; }
     if (ref && baris)   { const m = detail.map.get(`ref:${ref}|baris:${baris}`); if (m) return m; }
     if (part && baris)  { const m = detail.map.get(`part:${part}|baris:${baris}`); if (m) return m; }
@@ -545,9 +618,135 @@ class TabController {
     return null;
   }
 
+  detectGoodsTransactionSheet(excludeSheetName){
+    const patterns = [/goods\s*transaction/i, /goods/i, /transaksi\s*barang/i];
+    let candidates = [];
+    for (const re of patterns){
+      candidates = this.state.wb.SheetNames.filter(n => n !== excludeSheetName && re.test(n));
+      if (candidates.length) break;
+    }
+    if (!candidates.length) return null;
+
+    for (const sheetName of candidates){
+      const ws = this.state.wb.Sheets[sheetName];
+      if (!ws) continue;
+
+      const aoa = XLSX.utils.sheet_to_json(ws, {
+        header:1, raw:true, defval:null, blankrows:true
+      });
+
+      let headerIdx = -1;
+      for (let i = 0; i < Math.min(aoa.length, 60); i++){
+        const H = (aoa[i] || []).map(norm);
+        const hasRef    = H.some(h => GT_ALIASES.ref.some(a => h === a));
+        const hasLok    = H.some(h => GT_ALIASES.lokasi.some(a => h === a));
+        const hasStatus = H.some(h => GT_ALIASES.status.some(a => h === a));
+        const hasUpd    = H.some(h => GT_ALIASES.diupdateTanggal.some(a => h === a));
+        if (hasRef || hasLok || hasStatus || hasUpd){ headerIdx = i; break; }
+      }
+      if (headerIdx === -1) continue;
+
+      const headers = (aoa[headerIdx] || []).map(h => String(h ?? "").trim());
+
+      const idx = {
+        ref:    findColumnIndex(headers, GT_ALIASES.ref),
+        lokasi: findColumnIndex(headers, GT_ALIASES.lokasi),
+        status: findColumnIndex(headers, GT_ALIASES.status),
+        diupdateTanggal: findColumnIndex(headers, GT_ALIASES.diupdateTanggal),
+        doc:    findColumnIndex(headers, COL_ALIASES.nomorDokumen),
+        baris:  findColumnIndex(headers, COL_ALIASES.baris),
+        part:   findColumnIndex(headers, COL_ALIASES.part)
+      };
+
+      if (idx.ref === -1 && idx.lokasi === -1 && idx.status === -1 &&
+          idx.diupdateTanggal === -1) continue;
+
+      const map = new Map();
+      const records = [];
+
+      for (let r = headerIdx + 1; r < aoa.length; r++){
+        const raw = aoa[r] || [];
+        if (raw.every(c => c === null || c === undefined || String(c).trim() === "")) continue;
+
+        const rec = {
+          raw,
+          ref:    idx.ref    >= 0 ? String(raw[idx.ref]    ?? "").trim() : "",
+          lokasi: idx.lokasi >= 0 ? String(raw[idx.lokasi] ?? "").trim() : "",
+          status: idx.status >= 0 ? String(raw[idx.status] ?? "").trim() : "",
+          diupdateTanggal: idx.diupdateTanggal >= 0 ? raw[idx.diupdateTanggal] : null,
+          doc:    idx.doc    >= 0 ? String(raw[idx.doc]    ?? "").trim() : "",
+          baris:  idx.baris  >= 0 ? String(raw[idx.baris]  ?? "").trim() : "",
+          part:   idx.part   >= 0 ? String(raw[idx.part]   ?? "").trim() : ""
+        };
+
+        if (!rec.ref && !rec.lokasi && !rec.status &&
+            (rec.diupdateTanggal === null || rec.diupdateTanggal === undefined)) continue;
+
+        records.push(rec);
+
+        if (rec.doc && rec.baris)  map.set(`doc:${rec.doc}|baris:${rec.baris}`, rec);
+        if (rec.part && rec.baris) map.set(`part:${rec.part}|baris:${rec.baris}`, rec);
+        if (rec.doc)               map.set(`doc:${rec.doc}`, rec);
+        if (rec.part)              map.set(`part:${rec.part}`, rec);
+      }
+
+      if (!records.length) continue;
+
+      return {
+        sheetName,
+        map,
+        records,
+        headerIdx,
+        columns: headers,
+        columnIndexes: idx,
+        matchedCols: {
+          ref:    idx.ref    >= 0 ? headers[idx.ref]    : null,
+          lokasi: idx.lokasi >= 0 ? headers[idx.lokasi] : null,
+          status: idx.status >= 0 ? headers[idx.status] : null,
+          diupdateTanggal: idx.diupdateTanggal >= 0 ? headers[idx.diupdateTanggal] : null
+        }
+      };
+    }
+    return null;
+  }
+
+  lookupGoodsTransaction(gt, row){
+    const doc   = String(row["Nomor Dokumen"] ?? "").trim();
+    const baris = String(row["Baris"] ?? "").trim();
+    const part  = String(row["Part"] ?? "").trim();
+
+    if (doc && baris)  { const m = gt.map.get(`doc:${doc}|baris:${baris}`);   if (m) return m; }
+    if (part && baris) { const m = gt.map.get(`part:${part}|baris:${baris}`); if (m) return m; }
+    if (doc)           { const m = gt.map.get(`doc:${doc}`);                  if (m) return m; }
+    if (part)          { const m = gt.map.get(`part:${part}`);                if (m) return m; }
+    return null;
+  }
+
   /* ------------------------------------------------------------------
-     Parse sheet utama + enrichment dari Detail
+     AUTO-FILL: Diubah Oleh ← Dibuat Oleh, Diubah Pada ← Dibuat Pada
      ------------------------------------------------------------------ */
+  autoFillChangedFromCreated(rows){
+    let filledOleh = 0, filledPada = 0;
+    rows.forEach(row => {
+      const dibuatOleh = row["Dibuat Oleh"];
+      const curOleh    = row["Diubah Oleh"];
+      if ((curOleh === "" || curOleh === null || curOleh === undefined) &&
+          dibuatOleh !== "" && dibuatOleh !== null && dibuatOleh !== undefined){
+        row["Diubah Oleh"] = dibuatOleh;
+        filledOleh++;
+      }
+
+      const dibuatPada = row["Dibuat Pada"];
+      const curPada    = row["Diubah Pada"];
+      if ((curPada === "" || curPada === null || curPada === undefined) &&
+          dibuatPada !== "" && dibuatPada !== null && dibuatPada !== undefined){
+        row["Diubah Pada"] = dibuatPada;
+        filledPada++;
+      }
+    });
+    return { filledOleh, filledPada };
+  }
+
   buildFromSheet(sheetName){
     const ws = this.state.wb.Sheets[sheetName];
     if (!ws) return;
@@ -557,7 +756,6 @@ class TabController {
       header:1, raw:true, defval:null, blankrows:true
     });
 
-    /* --- cari baris header --- */
     let headerIdx = -1;
     for (let i = 0; i < Math.min(aoa.length, 100); i++){
       const r = (aoa[i] || []).map(norm);
@@ -579,27 +777,28 @@ class TabController {
 
     const headers = (aoa[headerIdx] || []).map(h => String(h ?? "").trim());
 
-    /* --- deteksi Detail dulu supaya kita tahu kolom tambahannya --- */
     const detail = this.detectDetailSheet(sheetName);
 
-    /* --- bangun daftar kolom dinamis: kolom TAP + kolom tambahan Detail --- */
+    /* Bangun kolom tambahan dari Detail, kecuali kolom yang dikecualikan */
+    const excludedSet = new Set(
+      (this.cfg.excludedDetailColumns || []).map(norm)
+    );
+
     const extraDetailCols = [];
     if (detail){
       detail.columns.forEach(c => {
         if (!c) return;
-        const exists = this.cfg.columns.some(m => norm(m) === norm(c));
-        const already = extraDetailCols.some(x => norm(x) === norm(c));
-        if (!exists && !already) extraDetailCols.push(c);
+        const key = norm(c);
+        if (excludedSet.has(key)) return;
+        if (this.cfg.columns.some(m => norm(m) === key)) return;
+        if (extraDetailCols.some(x => norm(x) === key)) return;
+        extraDetailCols.push(c);
       });
     }
     this.state.columns = [...this.cfg.columns, ...extraDetailCols];
 
-    const colIdx = this.cfg.columns.map((col) => {
-      const found = headers.findIndex(h => norm(h) === norm(col));
-      return found;
-    });
+    const colIdx = this.cfg.columns.map(col => findMainColumnIndex(headers, col));
 
-    /* --- ambil baris data --- */
     const rows = [];
     for (let r = headerIdx + 1; r < aoa.length; r++){
       const raw = aoa[r] || [];
@@ -631,14 +830,13 @@ class TabController {
         obj[col] = typeof v === "number" ? v : String(v).trim();
       });
 
-      /* init kolom tambahan dari Detail */
       extraDetailCols.forEach(col => { obj[col] = ""; });
 
       if (!obj["Nomor Dokumen"] && !obj["Part"] && !obj["Nomor Referensi"]) continue;
       rows.push(obj);
     }
 
-    /* --- ENRICHMENT dari sheet Detail (semua kolom) --- */
+    /* --- ENRICHMENT #1: sheet Detail --- */
     if (detail){
       let matched = 0, filledPart = 0, filledDesc = 0, filledExtra = 0;
 
@@ -647,11 +845,9 @@ class TabController {
         if (!rec) return;
         matched++;
 
-        /* Part & Deskripsi (kolom utama TAP) */
         if (!row["Part"] && rec.part){ row["Part"] = rec.part; filledPart++; }
         if (!row["Deskripsi"] && rec.deskripsi){ row["Deskripsi"] = rec.deskripsi; filledDesc++; }
 
-        /* Semua kolom Detail di-merge ke baris utama (hanya kalau kosong) */
         detail.columns.forEach((colName, ci) => {
           if (!colName) return;
           const v = rec.raw[ci];
@@ -680,6 +876,66 @@ class TabController {
       this.state.detailInfo = null;
     }
 
+    /* --- ENRICHMENT #2: sheet Goods Transaction --- */
+    const gt = this.detectGoodsTransactionSheet(sheetName);
+    if (gt){
+      let matched = 0, filledRef = 0, filledLokasi = 0;
+      let filledStatus = 0, filledDibuat = 0, filledKonfirmasi = 0;
+
+      rows.forEach(row => {
+        const rec = this.lookupGoodsTransaction(gt, row);
+        if (!rec) return;
+        matched++;
+
+        if (!row["Nomor Referensi"] && rec.ref){
+          row["Nomor Referensi"] = rec.ref;
+          filledRef++;
+        }
+        if (!row["Lokasi Tujuan"] && rec.lokasi){
+          row["Lokasi Tujuan"] = rec.lokasi;
+          filledLokasi++;
+        }
+
+        /* STATUS ← kolom STATUS sheet Goods Transaction */
+        if ((row["Status"] === "" || row["Status"] == null) && rec.status){
+          row["Status"] = rec.status;
+          filledStatus++;
+        }
+
+        /* Dibuat Pada & Dikonfirmasi Pada ← kolom Diupdate Tanggal */
+        if (rec.diupdateTanggal !== null && rec.diupdateTanggal !== undefined &&
+            String(rec.diupdateTanggal).trim() !== ""){
+
+          const tgl = formatDateForTab(rec.diupdateTanggal, this.cfg.dateFormat);
+
+          if (row["Dibuat Pada"] === "" || row["Dibuat Pada"] == null){
+            row["Dibuat Pada"] = tgl;
+            filledDibuat++;
+          }
+          if (row["Dikonfirmasi Pada"] === "" || row["Dikonfirmasi Pada"] == null){
+            row["Dikonfirmasi Pada"] = tgl;
+            filledKonfirmasi++;
+          }
+        }
+      });
+
+      this.state.gtInfo = {
+        sheetName: gt.sheetName,
+        count: gt.records.length,
+        matched, filledRef, filledLokasi,
+        filledStatus, filledDibuat, filledKonfirmasi,
+        refCol: gt.matchedCols.ref,
+        lokasiCol: gt.matchedCols.lokasi,
+        statusCol: gt.matchedCols.status,
+        diupdateTanggalCol: gt.matchedCols.diupdateTanggal
+      };
+    } else {
+      this.state.gtInfo = null;
+    }
+
+    /* --- AUTO-FILL: Diubah Oleh ← Dibuat Oleh, Diubah Pada ← Dibuat Pada --- */
+    this.state.autoFillInfo = this.autoFillChangedFromCreated(rows);
+
     this.state.rows = rows;
     this.renderDetailInfo();
     this.buildFilterOptions();
@@ -692,11 +948,15 @@ class TabController {
   renderDetailInfo(){
     const box = this.el("detailInfo");
     const info = this.state.detailInfo;
+    const gt   = this.state.gtInfo;
+    const af   = this.state.autoFillInfo;
     box.innerHTML = "";
     box.classList.remove("hidden");
 
+    let html = "";
+
     if (!info){
-      box.innerHTML = `
+      html += `
         <div class="info warn">
           <span class="ico">⚠️</span>
           <div>
@@ -706,31 +966,100 @@ class TabController {
             <code>detail_part</code>, <code>DETAIL</code>) agar dilengkapi otomatis.
           </div>
         </div>`;
-      return;
+    } else {
+      const extraHtml = info.extraCols && info.extraCols.length
+        ? `<br>Kolom tambahan dari Detail yang ikut ditampilkan: <code>${info.extraCols.map(escapeHtml).join("</code>, <code>")}</code>.`
+        : "";
+
+      const excluded = (this.cfg.excludedDetailColumns || []);
+      const excludedHtml = excluded.length
+        ? `<br><span style="color:#b45309"><b>Dikecualikan di ${escapeHtml(this.cfg.label)}:</b> <code>${excluded.map(escapeHtml).join("</code>, <code>")}</code>.</span>`
+        : "";
+
+      html += `
+        <div class="info ok">
+          <span class="ico">✅</span>
+          <div>
+            <b>Sheet Detail terdeteksi: <code>${escapeHtml(info.sheetName)}</code></b>
+            — ${info.count.toLocaleString("id-ID")} baris referensi.
+            Kolom Part: <code>${escapeHtml(info.partCol ?? "-")}</code>,
+            Deskripsi: <code>${escapeHtml(info.descCol ?? "-")}</code>.<br>
+            Baris utama yang cocok: <b>${info.matched.toLocaleString("id-ID")}</b>.
+            Nilai diisi ke kolom kosong: Part <b>${info.filledPart}</b>,
+            Deskripsi <b>${info.filledDesc}</b>${info.filledExtra ? `, kolom tambahan <b>${info.filledExtra}</b>` : ""}.
+            ${extraHtml}
+            ${excludedHtml}
+          </div>
+        </div>`;
     }
 
-    const extraHtml = info.extraCols && info.extraCols.length
-      ? `<br>Kolom tambahan dari Detail yang ikut ditampilkan: <code>${info.extraCols.map(escapeHtml).join("</code>, <code>")}</code>.`
-      : "";
+    if (!gt){
+      html += `
+        <div class="info warn">
+          <span class="ico">⚠️</span>
+          <div>
+            <b>Sheet Goods Transaction tidak ditemukan.</b><br>
+            Kolom <b>Nomor Referensi</b>, <b>Lokasi Tujuan</b>, <b>Status</b>,
+            <b>Dibuat Pada</b>, dan <b>Dikonfirmasi Pada</b> hanya diambil dari sheet utama
+            (header <code>Referensi</code> / <code>Lokasi Sampai</code> juga dikenali).
+            Beri nama sheet sumber dengan kata "Goods Transaction" agar dilengkapi otomatis.
+          </div>
+        </div>`;
+    } else {
+      html += `
+        <div class="info ok">
+          <span class="ico">✅</span>
+          <div>
+            <b>Sheet Goods Transaction terdeteksi: <code>${escapeHtml(gt.sheetName)}</code></b>
+            — ${gt.count.toLocaleString("id-ID")} baris referensi.<br>
+            Kolom <b>Referensi</b>: <code>${escapeHtml(gt.refCol ?? "-")}</code> →
+            <b>Nomor Referensi</b>;
+            kolom <b>Lokasi Sampai</b>: <code>${escapeHtml(gt.lokasiCol ?? "-")}</code> →
+            <b>Lokasi Tujuan</b>;
+            kolom <b>Status</b>: <code>${escapeHtml(gt.statusCol ?? "-")}</code> →
+            <b>Status</b>;
+            kolom <b>Diupdate Tanggal</b>: <code>${escapeHtml(gt.diupdateTanggalCol ?? "-")}</code> →
+            <b>Dibuat Pada</b> &amp; <b>Dikonfirmasi Pada</b>.<br>
+            Baris utama yang cocok: <b>${gt.matched.toLocaleString("id-ID")}</b>.<br>
+            Nilai diisi ke kolom kosong:
+            Nomor Referensi <b>${gt.filledRef}</b>,
+            Lokasi Tujuan <b>${gt.filledLokasi}</b>,
+            Status <b>${gt.filledStatus ?? 0}</b>,
+            Dibuat Pada <b>${gt.filledDibuat ?? 0}</b>,
+            Dikonfirmasi Pada <b>${gt.filledKonfirmasi ?? 0}</b>.
+          </div>
+        </div>`;
+    }
 
-    box.innerHTML = `
-      <div class="info ok">
-        <span class="ico">✅</span>
-        <div>
-          <b>Sheet Detail terdeteksi: <code>${escapeHtml(info.sheetName)}</code></b>
-          — ${info.count.toLocaleString("id-ID")} baris referensi.
-          Kolom Part: <code>${escapeHtml(info.partCol ?? "-")}</code>,
-          Deskripsi: <code>${escapeHtml(info.descCol ?? "-")}</code>.<br>
-          Baris utama yang cocok: <b>${info.matched.toLocaleString("id-ID")}</b>.
-          Nilai diisi ke kolom kosong: Part <b>${info.filledPart}</b>,
-          Deskripsi <b>${info.filledDesc}</b>${info.filledExtra ? `, kolom tambahan <b>${info.filledExtra}</b>` : ""}.
-          ${extraHtml}
-        </div>
-      </div>`;
+    if (af && (af.filledOleh || af.filledPada)){
+      html += `
+        <div class="info ok" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af">
+          <span class="ico">🔁</span>
+          <div>
+            <b>Auto-fill kolom perubahan:</b>
+            <b>Diubah Oleh</b> diisi dari <code>Dibuat Oleh</code> pada <b>${af.filledOleh.toLocaleString("id-ID")}</b> baris;
+            <b>Diubah Pada</b> diisi dari <code>Dibuat Pada</code> pada <b>${af.filledPada.toLocaleString("id-ID")}</b> baris.
+          </div>
+        </div>`;
+    }
+
+    box.innerHTML = html;
 
     const pill = this.el("stDetail");
-    pill.style.display = "";
-    pill.querySelector("b").textContent = info.matched.toLocaleString("id-ID");
+    if (info){
+      pill.style.display = "";
+      pill.querySelector("b").textContent = info.matched.toLocaleString("id-ID");
+    } else {
+      pill.style.display = "none";
+    }
+
+    const pillGT = this.el("stGT");
+    if (gt){
+      pillGT.style.display = "";
+      pillGT.querySelector("b").textContent = gt.matched.toLocaleString("id-ID");
+    } else {
+      pillGT.style.display = "none";
+    }
   }
 
   buildFilterOptions(){
@@ -831,9 +1160,6 @@ class TabController {
     this.el("stCols").textContent     = cols.length;
   }
 
-  /* ------------------------------------------------------------------
-     EXPORT — hasil presisi
-     ------------------------------------------------------------------ */
   exportExcel(){
     if (!this.state.rows.length){ toast("Belum ada data untuk diekspor."); return; }
 

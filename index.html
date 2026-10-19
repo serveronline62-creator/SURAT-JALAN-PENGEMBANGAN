@@ -15,7 +15,6 @@
     print-color-adjust:exact;
   }
 
-  /* ================= TOOLBAR ================= */
   .toolbar{
     position:sticky; top:0; z-index:50;
     display:flex; align-items:center; gap:8px; flex-wrap:wrap;
@@ -45,7 +44,6 @@
     background:#1f2937; color:#9ca3af; min-width:64px; text-align:center;
   }
 
-  /* ================= HALAMAN A4 ================= */
   .page{
     width:210mm;
     min-height:297mm;
@@ -76,7 +74,6 @@
 
   p.para{ margin:0 0 10px; text-align:justify; }
 
-  /* ================= TABEL ================= */
   table{
     width:100%;
     border-collapse:collapse;
@@ -130,14 +127,12 @@
   }
   tr:hover .act .del{ opacity:1; }
 
-  /* ================= SELEKSI ================= */
   tbody td.sel{
     background:#dbeafe !important;
     box-shadow: inset 0 0 0 2px #2563eb;
   }
   tbody td.sel:focus{ outline:none; }
 
-  /* ================= TANDA TANGAN ================= */
   .signs{
     display:flex; justify-content:space-between; gap:10px;
     margin-top:24px; text-align:center;
@@ -145,14 +140,12 @@
   .signs .s{ flex:1; }
   .signs .s .sp{ height:62px; }
 
-  /* ================= EDITABLE ================= */
   [contenteditable="true"]{ transition:background .12s; }
   [contenteditable="true"]:hover{ background:#f3f4f6; }
   [contenteditable="true"]:focus{
     outline:2px solid #93c5fd; outline-offset:-2px; background:#eff6ff;
   }
 
-  /* ================= CETAK ================= */
   @media print{
     @page{ size:A4; margin:0; }
     body{ background:#fff; }
@@ -171,7 +164,6 @@
 </head>
 <body>
 
-<!-- ======================= TOOLBAR ======================= -->
 <div class="toolbar no-print">
   <div class="brand">
     Surat Jalan Generator
@@ -196,7 +188,6 @@
   </div>
 </div>
 
-<!-- ======================= DOKUMEN ======================= -->
 <div class="page" id="page">
 
   <div class="doc-title">SURAT JALAN</div>
@@ -264,18 +255,15 @@
 
 </div>
 
-<!-- ============ LIBRARY PDF ============ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
-<!-- ======================= SCRIPT ======================= -->
 <script>
 (function () {
   'use strict';
 
   var tbody = document.getElementById('tbody');
 
-  /* ---------- DATA DEFAULT ---------- */
   var RAW = [
     ["GLASS PANEL 24 INCHI", "24", "63X47X16", "",
      "No : KKG/KPG/SV/26/07/001 | TGL : 15/07/2026 | PO : 41900045521\nTanggal Bukti : 15/07/2026 | Nomor Bukti : TRU/KPG/SV/26/07/001"],
@@ -333,12 +321,10 @@
     return { name: a[0], qty: a[1], uk: a[2], colly: a[3], ket: a[4] };
   });
 
-  /* ---------- STATE ---------- */
   var selectMode = false;
   var selectedCells = new Set();
   var anchorCell = null;
 
-  /* ---------- UTIL ---------- */
   function esc(s) {
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -369,7 +355,6 @@
     return (nums[0] * nums[1] * nums[2]) / 1000;
   }
 
-  /* ---------- RENDER BARIS ---------- */
   function makeRow(r) {
     r = r || {};
     var tr = document.createElement('tr');
@@ -404,15 +389,6 @@
     recalc();
   }
 
-  /* ==========================================================
-     RENUMBER — kolom NO berurut meski ada sel gabungan
-     ----------------------------------------------------------
-     Sel gabungan (rowSpan) hanya "dimiliki" oleh baris asalnya.
-     `tr.cells` di baris yang tertutup rowSpan TIDAK memuat sel
-     NO tersebut, jadi cukup menelusuri setiap sel NO yang
-     benar-benar ada dan menaikkan counter satu per satu.
-     Hasil: 1, 2, 3, ... tanpa lompatan.
-     ========================================================== */
   function renumber() {
     var n = 1;
     Array.prototype.forEach.call(tbody.rows, function (tr) {
@@ -439,10 +415,6 @@
     document.getElementById('totalColly').textContent = colly || '-';
   }
 
-  /* ==========================================================
-     GRID — memetakan setiap sel DOM ke koordinat (baris, kolom)
-     dengan memperhitungkan rowSpan / colSpan.
-     ========================================================== */
   function buildTbodyGrid() {
     var rows = Array.from(tbody.rows);
     var grid = [];
@@ -480,9 +452,6 @@
     return null;
   }
 
-  /* ==========================================================
-     SELEKSI
-     ========================================================== */
   function selectCell(td) {
     if (!td || td.classList.contains('act')) return;
     selectedCells.add(td);
@@ -549,9 +518,6 @@
     document.getElementById('selInfo').textContent = n + ' sel';
   }
 
-  /* ==========================================================
-     VALIDASI SELEKSI → persegi panjang
-     ========================================================== */
   function getSelectionInfo(requireUnmerged) {
     if (selectedCells.size < 2) return null;
 
@@ -587,11 +553,6 @@
     return { grid: grid, minR: minR, maxR: maxR, minC: minC, maxC: maxC };
   }
 
-  /* ==========================================================
-     MERGE OPERATIONS
-     ========================================================== */
-
-  /* Merge & Center / Merge Cells — gabung seluruh area jadi satu sel */
   function doMerge(center) {
     var info = getSelectionInfo(true);
     if (!info) {
@@ -603,12 +564,10 @@
     var newRS = info.maxR - info.minR + 1;
     var newCS = info.maxC - info.minC + 1;
 
-    /* Hapus semua sel terpilih selain target */
     Array.from(selectedCells).forEach(function (td) {
       if (td !== target && td.parentNode) td.parentNode.removeChild(td);
     });
 
-    /* Set span pada target */
     target.rowSpan = newRS;
     target.colSpan = newCS;
     target.setAttribute('rowspan', newRS);
@@ -626,7 +585,6 @@
     recalc();
   }
 
-  /* Merge Across — gabung per baris secara horizontal */
   function doMergeAcross() {
     var info = getSelectionInfo(true);
     if (!info) {
@@ -651,7 +609,6 @@
     recalc();
   }
 
-  /* Unmerge — pisahkan setiap sel gabungan dalam pilihan */
   function doUnmerge() {
     var toUnmerge = [];
     selectedCells.forEach(function (td) {
@@ -682,7 +639,6 @@
       .replace(/\bmerged-center\b/g, '')
       .replace(/\s+/g, ' ').trim();
 
-    /* Salin atribut (tanpa rowspan/colspan/class/style) */
     var attrs = {};
     Array.from(td.attributes).forEach(function (a) {
       if (a.name === 'rowspan' || a.name === 'colspan') return;
@@ -690,7 +646,6 @@
       attrs[a.name] = a.value;
     });
 
-    /* 1) Ganti sel asal dengan `cs` sel baru di baris yang sama */
     var parent = td.parentNode;
     for (var j = 0; j < cs; j++) {
       var newTd = document.createElement('td');
@@ -701,7 +656,6 @@
     }
     parent.removeChild(td);
 
-    /* 2) Selipkan `cs` sel baru di baris r+1..r+rs-1 pada posisi kolom c */
     for (var i = 1; i < rs; i++) {
       var row = tbody.rows[r + i];
       if (!row) continue;
@@ -723,9 +677,6 @@
     }
   }
 
-  /* ==========================================================
-     MODE EDIT / PILIH
-     ========================================================== */
   function setMode(select) {
     selectMode = !!select;
 
@@ -751,11 +702,6 @@
     updateMergeButtonStates();
   }
 
-  /* ==========================================================
-     EVENT HANDLERS
-     ========================================================== */
-
-  /* Input pada sel */
   tbody.addEventListener('input', function (e) {
     var tr = e.target.closest ? e.target.closest('tr') : null;
     if (!tr) return;
@@ -763,7 +709,6 @@
     recalc();
   });
 
-  /* Hapus baris */
   tbody.addEventListener('click', function (e) {
     var btn = e.target.closest ? e.target.closest('.del') : null;
     if (!btn) return;
@@ -771,7 +716,6 @@
     if (tr) { tr.parentNode.removeChild(tr); renumber(); recalc(); }
   });
 
-  /* Mouse down — seleksi sel di Mode Pilih */
   tbody.addEventListener('mousedown', function (e) {
     if (!selectMode) return;
 
@@ -794,19 +738,16 @@
     }
   });
 
-  /* Klik di luar tabel → bersihkan seleksi */
   document.addEventListener('mousedown', function (e) {
     if (!selectMode) return;
     if (e.target.closest && (e.target.closest('#tbody') || e.target.closest('.toolbar'))) return;
     clearSelection();
   });
 
-  /* Esc → bersihkan seleksi */
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && selectMode) clearSelection();
   });
 
-  /* Tombol toolbar */
   document.getElementById('btnMode').addEventListener('click', function () {
     setMode(!selectMode);
   });
@@ -850,7 +791,6 @@
     }
   }
 
-  /* Bangun body PDF dengan dukungan colSpan/rowSpan */
   function buildPdfBody() {
     var grid = buildTbodyGrid();
     var body = [];
@@ -1003,33 +943,59 @@
       }
     });
 
-    y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : y) + 6;
+    /* ==========================================================
+       7. PENUTUP + TANDA TANGAN
+       Blok mengikuti posisi akhir tabel:
+       - Paragraf penutup: 4 mm di bawah garis tabel terakhir
+       - Tanda tangan: 12 mm di bawah paragraf penutup
+       - Jika melebihi batas 2 mm dari tepi bawah → pindah halaman
+       ========================================================== */
+    var tableFinalY = (doc.lastAutoTable && doc.lastAutoTable.finalY)
+      ? doc.lastAutoTable.finalY
+      : y;
 
-    /* 7. PENUTUP */
+    var BOTTOM_GAP    = 2;     // mm — jarak aman huruf terbawah ke tepi kertas
+    var DESCENDER     = 0.7;   // mm — perkiraan turunnya huruf (g, y, p)
+    var GAP_TABLE     = 4;     // mm — jarak tabel ke paragraf penutup (dekat)
+    var GAP_CLOSE_SIG = 12;    // mm — jarak paragraf penutup ke label tanda tangan
+
     var closeEl = document.querySelectorAll('p.para')[1];
     var closeLines = doc.splitTextToSize(closeEl ? closeEl.textContent.trim() : '', contentW);
+    var closeHeight = closeLines.length * lineH;
 
-    if (y + closeLines.length * lineH + 60 > pageH - MB) {
+    /* Posisi mulai blok = tepat di bawah tabel */
+    var blockStartY = tableFinalY + GAP_TABLE;
+
+    /* Kalau seluruh blok (penutup + ttd) tidak muat, pindah halaman */
+    var blockHeight = closeHeight + GAP_CLOSE_SIG + DESCENDER;
+    if (blockStartY + blockHeight > pageH - BOTTOM_GAP) {
       doc.addPage();
-      y = MT + 10;
+      blockStartY = MT + 10;
     }
 
+    /* 7a. Paragraf penutup */
     doc.setFont('times', 'normal');
     doc.setFontSize(9);
-    closeLines.forEach(function (ln, i) { doc.text(ln, ML, y + i * lineH); });
-    y += closeLines.length * lineH + 12;
+    closeLines.forEach(function (ln, i) {
+      doc.text(ln, ML, blockStartY + i * lineH);
+    });
 
-    /* 8. TANDA TANGAN */
+    /* 8. Tanda tangan — mengikuti paragraf penutup */
+    var sigLabelY = blockStartY + closeHeight + GAP_CLOSE_SIG;
+
+    if (sigLabelY + DESCENDER > pageH - BOTTOM_GAP) {
+      doc.addPage();
+      sigLabelY = MT + 10;
+    }
+
     var sigEls = document.querySelectorAll('.signs .s > div[contenteditable]');
     var labels = [];
     Array.prototype.forEach.call(sigEls, function (el) { labels.push(el.textContent.trim()); });
     var sigW = contentW / labels.length;
 
-    doc.setFont('times', 'normal');
-    doc.setFontSize(9);
     labels.forEach(function (label, i) {
       var cx = ML + sigW * i + sigW / 2;
-      doc.text(label, cx, y, { align: 'center' });
+      doc.text(label, cx, sigLabelY, { align: 'center' });
     });
 
     doc.save(buildFileName());

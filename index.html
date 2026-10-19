@@ -32,10 +32,18 @@
     background:#1f2937; color:#e5e7eb; cursor:pointer; transition:.15s;
   }
   .toolbar button:hover{ background:#374151; }
-  .toolbar button:disabled{ opacity:.6; cursor:not-allowed; }
+  .toolbar button:disabled{ opacity:.4; cursor:not-allowed; }
+  .toolbar button:disabled:hover{ background:#1f2937; }
   .toolbar button.primary{ background:#16a34a; border-color:#16a34a; color:#fff; }
   .toolbar button.primary:hover{ background:#15803d; }
   .toolbar button.primary:disabled:hover{ background:#16a34a; }
+  .toolbar button.active{ background:#2563eb; border-color:#2563eb; color:#fff; }
+  .tool-group{ display:flex; gap:6px; align-items:center; padding-left:10px; border-left:1px solid #374151; }
+  .sel-info{
+    font-size:11px; font-weight:500;
+    padding:5px 10px; border-radius:6px;
+    background:#1f2937; color:#9ca3af; min-width:64px; text-align:center;
+  }
 
   /* ================= HALAMAN A4 ================= */
   .page{
@@ -93,13 +101,14 @@
   td.r{ text-align:right; }
   td.ket{ white-space:pre-line; font-size:7pt; line-height:1.35; }
   td.idx{ font-weight:bold; }
-
+  td.idx[rowspan]{ vertical-align:middle; }
   td.m3cell{
     text-align:right;
     font-variant-numeric:tabular-nums;
     cursor:default;
     color:#111;
   }
+  td.merged-center { text-align:center; vertical-align:middle; }
 
   tbody tr{ page-break-inside:avoid; }
   thead{ display:table-header-group; }
@@ -120,6 +129,13 @@
     cursor:pointer; padding:0; opacity:.35; transition:.15s;
   }
   tr:hover .act .del{ opacity:1; }
+
+  /* ================= SELEKSI ================= */
+  tbody td.sel{
+    background:#dbeafe !important;
+    box-shadow: inset 0 0 0 2px #2563eb;
+  }
+  tbody td.sel:focus{ outline:none; }
 
   /* ================= TANDA TANGAN ================= */
   .signs{
@@ -149,6 +165,7 @@
     }
     [contenteditable="true"]{ background:transparent !important; outline:none !important; }
     .act{ display:none !important; }
+    tbody td.sel{ background:transparent !important; box-shadow:none !important; }
   }
 </style>
 </head>
@@ -158,11 +175,25 @@
 <div class="toolbar no-print">
   <div class="brand">
     Surat Jalan Generator
-    <small>M³ otomatis dari UKURAN (P × L × T ÷ 1000) — klik teks lain untuk mengedit</small>
+    <small>M³ otomatis (P × L × T ÷ 1000) — Mode Edit untuk teks, Mode Pilih untuk merge</small>
   </div>
-  <button type="button" id="btnAdd">+ Tambah Baris</button>
-  <button type="button" id="btnReset">↺ Reset Data PDF</button>
-  <button type="button" class="primary" id="btnDownload">⬇ Download PDF</button>
+
+  <button type="button" id="btnMode" title="Aktifkan Mode Pilih untuk menggabungkan sel">Mode: Edit</button>
+
+  <div class="tool-group">
+    <button type="button" id="btnMergeCenter" disabled title="Gabungkan sel dan rata tengah">⊞ Merge &amp; Center</button>
+    <button type="button" id="btnMergeAcross" disabled title="Gabungkan sel per baris">⇔ Merge Across</button>
+    <button type="button" id="btnMergeCells"  disabled title="Gabungkan sel tanpa ubah perataan">⊞ Merge Cells</button>
+    <button type="button" id="btnUnmerge"     disabled title="Pisahkan sel gabungan">⊟ Unmerge</button>
+  </div>
+
+  <span class="sel-info" id="selInfo">0 sel</span>
+
+  <div class="tool-group">
+    <button type="button" id="btnAdd">+ Tambah Baris</button>
+    <button type="button" id="btnReset">↺ Reset Data PDF</button>
+    <button type="button" class="primary" id="btnDownload">⬇ Download PDF</button>
+  </div>
 </div>
 
 <!-- ======================= DOKUMEN ======================= -->
@@ -244,7 +275,7 @@
 
   var tbody = document.getElementById('tbody');
 
-  /* ---------- DATA DEFAULT (sesuai PDF) ---------- */
+  /* ---------- DATA DEFAULT ---------- */
   var RAW = [
     ["GLASS PANEL 24 INCHI", "24", "63X47X16", "",
      "No : KKG/KPG/SV/26/07/001 | TGL : 15/07/2026 | PO : 41900045521\nTanggal Bukti : 15/07/2026 | Nomor Bukti : TRU/KPG/SV/26/07/001"],
@@ -302,6 +333,11 @@
     return { name: a[0], qty: a[1], uk: a[2], colly: a[3], ket: a[4] };
   });
 
+  /* ---------- STATE ---------- */
+  var selectMode = false;
+  var selectedCells = new Set();
+  var anchorCell = null;
+
   /* ---------- UTIL ---------- */
   function esc(s) {
     return String(s == null ? '' : s)
@@ -337,14 +373,15 @@
   function makeRow(r) {
     r = r || {};
     var tr = document.createElement('tr');
+    var ce = selectMode ? '' : ' contenteditable="true"';
     tr.innerHTML =
       '<td class="c idx"></td>' +
-      '<td contenteditable="true" data-f="name">' + esc(r.name) + '</td>' +
-      '<td class="c" contenteditable="true" data-f="qty">' + esc(r.qty) + '</td>' +
-      '<td class="c" contenteditable="true" data-f="uk">' + esc(r.uk) + '</td>' +
+      '<td' + ce + ' data-f="name">' + esc(r.name) + '</td>' +
+      '<td class="c"' + ce + ' data-f="qty">' + esc(r.qty) + '</td>' +
+      '<td class="c"' + ce + ' data-f="uk">' + esc(r.uk) + '</td>' +
       '<td class="r m3cell" title="Otomatis dari UKURAN (P×L×T÷1000)"></td>' +
-      '<td class="c" contenteditable="true" data-f="colly">' + esc(r.colly) + '</td>' +
-      '<td class="ket" contenteditable="true" data-f="ket">' + esc(r.ket) + '</td>' +
+      '<td class="c"' + ce + ' data-f="colly">' + esc(r.colly) + '</td>' +
+      '<td class="ket"' + ce + ' data-f="ket">' + esc(r.ket) + '</td>' +
       '<td class="act no-print"><button type="button" class="del" title="Hapus baris">&times;</button></td>';
     updateRowM3(tr);
     return tr;
@@ -362,29 +399,363 @@
   function render(rows) {
     tbody.innerHTML = '';
     rows.forEach(function (r) { tbody.appendChild(makeRow(r)); });
-    renumber(); recalc();
+    clearSelection();
+    renumber();
+    recalc();
   }
 
+  /* ==========================================================
+     RENUMBER — kolom NO berurut meski ada sel gabungan
+     ----------------------------------------------------------
+     Sel gabungan (rowSpan) hanya "dimiliki" oleh baris asalnya.
+     `tr.cells` di baris yang tertutup rowSpan TIDAK memuat sel
+     NO tersebut, jadi cukup menelusuri setiap sel NO yang
+     benar-benar ada dan menaikkan counter satu per satu.
+     Hasil: 1, 2, 3, ... tanpa lompatan.
+     ========================================================== */
   function renumber() {
-    Array.prototype.forEach.call(tbody.children, function (tr, i) {
-      tr.querySelector('.idx').textContent = i + 1;
+    var n = 1;
+    Array.prototype.forEach.call(tbody.rows, function (tr) {
+      Array.prototype.forEach.call(tr.cells, function (td) {
+        if (td.classList.contains('idx')) {
+          td.textContent = n++;
+        }
+      });
     });
   }
 
   function recalc() {
     var qty = 0, m3 = 0, colly = 0;
-    Array.prototype.forEach.call(tbody.children, function (tr) {
-      qty   += num(tr.querySelector('[data-f="qty"]').textContent);
-      colly += num(tr.querySelector('[data-f="colly"]').textContent);
-      var stored = tr.querySelector('.m3cell').dataset.m3;
-      m3 += stored ? parseFloat(stored) || 0 : 0;
+    Array.prototype.forEach.call(tbody.rows, function (tr) {
+      var qtyEl   = tr.querySelector('[data-f="qty"]');
+      var collyEl = tr.querySelector('[data-f="colly"]');
+      var m3El    = tr.querySelector('.m3cell');
+      if (qtyEl)   qty   += num(qtyEl.textContent);
+      if (collyEl) colly += num(collyEl.textContent);
+      if (m3El && m3El.dataset.m3) m3 += parseFloat(m3El.dataset.m3) || 0;
     });
     document.getElementById('totalQty').textContent   = qty || '-';
     document.getElementById('totalM3').textContent    = m3.toFixed(3);
     document.getElementById('totalColly').textContent = colly || '-';
   }
 
-  /* ---------- EVENT ---------- */
+  /* ==========================================================
+     GRID — memetakan setiap sel DOM ke koordinat (baris, kolom)
+     dengan memperhitungkan rowSpan / colSpan.
+     ========================================================== */
+  function buildTbodyGrid() {
+    var rows = Array.from(tbody.rows);
+    var grid = [];
+    rows.forEach(function (tr, r) {
+      if (!grid[r]) grid[r] = [];
+      var c = 0;
+      Array.from(tr.cells).forEach(function (td) {
+        while (grid[r][c]) c++;
+        var rs = td.rowSpan || 1;
+        var cs = td.colSpan || 1;
+        for (var i = 0; i < rs; i++) {
+          if (!grid[r + i]) grid[r + i] = [];
+          for (var j = 0; j < cs; j++) {
+            grid[r + i][c + j] = {
+              cell: td,
+              origin: (i === 0 && j === 0),
+              r: r + i, c: c + j,
+              rs: rs, cs: cs
+            };
+          }
+        }
+        c += cs;
+      });
+    });
+    return grid;
+  }
+
+  function findCellPos(grid, td) {
+    for (var r = 0; r < grid.length; r++) {
+      for (var c = 0; c < grid[r].length; c++) {
+        var g = grid[r][c];
+        if (g && g.cell === td && g.origin) return g;
+      }
+    }
+    return null;
+  }
+
+  /* ==========================================================
+     SELEKSI
+     ========================================================== */
+  function selectCell(td) {
+    if (!td || td.classList.contains('act')) return;
+    selectedCells.add(td);
+    td.classList.add('sel');
+    updateMergeButtonStates();
+  }
+
+  function toggleCell(td) {
+    if (!td || td.classList.contains('act')) return;
+    if (selectedCells.has(td)) {
+      selectedCells.delete(td);
+      td.classList.remove('sel');
+    } else {
+      selectedCells.add(td);
+      td.classList.add('sel');
+    }
+    updateMergeButtonStates();
+  }
+
+  function clearSelection() {
+    selectedCells.forEach(function (td) { td.classList.remove('sel'); });
+    selectedCells.clear();
+    anchorCell = null;
+    updateMergeButtonStates();
+  }
+
+  function selectRange(anchorTd, currentTd) {
+    var grid = buildTbodyGrid();
+    var a = findCellPos(grid, anchorTd);
+    var b = findCellPos(grid, currentTd);
+    if (!a || !b) return;
+
+    var minR = Math.min(a.r, b.r);
+    var maxR = Math.max(a.r + a.rs - 1, b.r + b.rs - 1);
+    var minC = Math.min(a.c, b.c);
+    var maxC = Math.max(a.c + a.cs - 1, b.c + b.cs - 1);
+
+    clearSelection();
+    for (var r = minR; r <= maxR; r++) {
+      for (var c = minC; c <= maxC; c++) {
+        var g = grid[r] && grid[r][c];
+        if (g && g.origin && !g.cell.classList.contains('act')) {
+          selectedCells.add(g.cell);
+          g.cell.classList.add('sel');
+        }
+      }
+    }
+    updateMergeButtonStates();
+  }
+
+  function updateMergeButtonStates() {
+    var n = selectedCells.size;
+    var canMerge = n >= 2;
+    document.getElementById('btnMergeCenter').disabled = !canMerge;
+    document.getElementById('btnMergeAcross').disabled = !canMerge;
+    document.getElementById('btnMergeCells').disabled  = !canMerge;
+
+    var canUnmerge = false;
+    selectedCells.forEach(function (td) {
+      if (td.rowSpan > 1 || td.colSpan > 1) canUnmerge = true;
+    });
+    document.getElementById('btnUnmerge').disabled = !canUnmerge;
+
+    document.getElementById('selInfo').textContent = n + ' sel';
+  }
+
+  /* ==========================================================
+     VALIDASI SELEKSI → persegi panjang
+     ========================================================== */
+  function getSelectionInfo(requireUnmerged) {
+    if (selectedCells.size < 2) return null;
+
+    var grid = buildTbodyGrid();
+    var positions = [];
+    var arr = Array.from(selectedCells);
+    for (var i = 0; i < arr.length; i++) {
+      var p = findCellPos(grid, arr[i]);
+      if (!p) return null;
+      if (requireUnmerged && (p.rs !== 1 || p.cs !== 1)) return null;
+      positions.push(p);
+    }
+
+    var minR = Infinity, maxR = -Infinity, minC = Infinity, maxC = -Infinity;
+    positions.forEach(function (p) {
+      minR = Math.min(minR, p.r);
+      maxR = Math.max(maxR, p.r + p.rs - 1);
+      minC = Math.min(minC, p.c);
+      maxC = Math.max(maxC, p.c + p.cs - 1);
+    });
+
+    var covered = new Set();
+    positions.forEach(function (p) {
+      for (var i = 0; i < p.rs; i++) {
+        for (var j = 0; j < p.cs; j++) {
+          covered.add((p.r + i) + ',' + (p.c + j));
+        }
+      }
+    });
+    var total = (maxR - minR + 1) * (maxC - minC + 1);
+    if (covered.size !== total) return null;
+
+    return { grid: grid, minR: minR, maxR: maxR, minC: minC, maxC: maxC };
+  }
+
+  /* ==========================================================
+     MERGE OPERATIONS
+     ========================================================== */
+
+  /* Merge & Center / Merge Cells — gabung seluruh area jadi satu sel */
+  function doMerge(center) {
+    var info = getSelectionInfo(true);
+    if (!info) {
+      alert('Pilih area persegi (minimal 2 sel) yang belum digabung.\nPastikan tidak ada sel gabungan di dalam pilihan.');
+      return;
+    }
+    var grid = info.grid;
+    var target = grid[info.minR][info.minC].cell;
+    var newRS = info.maxR - info.minR + 1;
+    var newCS = info.maxC - info.minC + 1;
+
+    /* Hapus semua sel terpilih selain target */
+    Array.from(selectedCells).forEach(function (td) {
+      if (td !== target && td.parentNode) td.parentNode.removeChild(td);
+    });
+
+    /* Set span pada target */
+    target.rowSpan = newRS;
+    target.colSpan = newCS;
+    target.setAttribute('rowspan', newRS);
+    target.setAttribute('colspan', newCS);
+
+    if (center) {
+      target.classList.add('merged-center');
+      target.style.textAlign = 'center';
+      target.style.verticalAlign = 'middle';
+    }
+
+    clearSelection();
+    selectCell(target);
+    renumber();
+    recalc();
+  }
+
+  /* Merge Across — gabung per baris secara horizontal */
+  function doMergeAcross() {
+    var info = getSelectionInfo(true);
+    if (!info) {
+      alert('Pilih area persegi (minimal 2 sel per baris) yang belum digabung.');
+      return;
+    }
+    var grid = info.grid;
+
+    for (var r = info.minR; r <= info.maxR; r++) {
+      var target = grid[r][info.minC].cell;
+      for (var c = info.minC + 1; c <= info.maxC; c++) {
+        var td = grid[r][c].cell;
+        if (td !== target && td.parentNode) td.parentNode.removeChild(td);
+      }
+      var span = info.maxC - info.minC + 1;
+      target.colSpan = span;
+      target.setAttribute('colspan', span);
+    }
+
+    clearSelection();
+    renumber();
+    recalc();
+  }
+
+  /* Unmerge — pisahkan setiap sel gabungan dalam pilihan */
+  function doUnmerge() {
+    var toUnmerge = [];
+    selectedCells.forEach(function (td) {
+      if (td.rowSpan > 1 || td.colSpan > 1) toUnmerge.push(td);
+    });
+    if (toUnmerge.length === 0) {
+      alert('Tidak ada sel gabungan dalam pilihan.');
+      return;
+    }
+
+    toUnmerge.forEach(function (td) { unmergeCell(td); });
+
+    clearSelection();
+    renumber();
+    recalc();
+  }
+
+  function unmergeCell(td) {
+    var grid = buildTbodyGrid();
+    var pos = findCellPos(grid, td);
+    if (!pos) return;
+    var r = pos.r, c = pos.c, rs = pos.rs, cs = pos.cs;
+    if (rs === 1 && cs === 1) return;
+
+    var content = td.innerHTML;
+    var baseClasses = td.className
+      .replace(/\bsel\b/g, '')
+      .replace(/\bmerged-center\b/g, '')
+      .replace(/\s+/g, ' ').trim();
+
+    /* Salin atribut (tanpa rowspan/colspan/class/style) */
+    var attrs = {};
+    Array.from(td.attributes).forEach(function (a) {
+      if (a.name === 'rowspan' || a.name === 'colspan') return;
+      if (a.name === 'class' || a.name === 'style') return;
+      attrs[a.name] = a.value;
+    });
+
+    /* 1) Ganti sel asal dengan `cs` sel baru di baris yang sama */
+    var parent = td.parentNode;
+    for (var j = 0; j < cs; j++) {
+      var newTd = document.createElement('td');
+      if (baseClasses) newTd.className = baseClasses;
+      Object.keys(attrs).forEach(function (k) { newTd.setAttribute(k, attrs[k]); });
+      if (j === 0) newTd.innerHTML = content;
+      parent.insertBefore(newTd, td);
+    }
+    parent.removeChild(td);
+
+    /* 2) Selipkan `cs` sel baru di baris r+1..r+rs-1 pada posisi kolom c */
+    for (var i = 1; i < rs; i++) {
+      var row = tbody.rows[r + i];
+      if (!row) continue;
+
+      var colCounter = 0;
+      var insertBefore = null;
+      for (var k = 0; k < row.cells.length; k++) {
+        if (colCounter >= c) { insertBefore = row.cells[k]; break; }
+        colCounter += row.cells[k].colSpan || 1;
+      }
+
+      for (var j2 = 0; j2 < cs; j2++) {
+        var newTd2 = document.createElement('td');
+        if (baseClasses) newTd2.className = baseClasses;
+        Object.keys(attrs).forEach(function (k2) { newTd2.setAttribute(k2, attrs[k2]); });
+        if (insertBefore) row.insertBefore(newTd2, insertBefore);
+        else row.appendChild(newTd2);
+      }
+    }
+  }
+
+  /* ==========================================================
+     MODE EDIT / PILIH
+     ========================================================== */
+  function setMode(select) {
+    selectMode = !!select;
+
+    var btn = document.getElementById('btnMode');
+    btn.textContent = selectMode ? 'Mode: Pilih' : 'Mode: Edit';
+    btn.classList.toggle('active', selectMode);
+    btn.title = selectMode
+      ? 'Mode Pilih aktif — klik sel untuk memilih, Ctrl/Shift untuk multi-pilih'
+      : 'Klik untuk masuk Mode Pilih (untuk merge)';
+
+    Array.from(tbody.querySelectorAll('[data-f]')).forEach(function (el) {
+      if (selectMode) el.removeAttribute('contenteditable');
+      else el.setAttribute('contenteditable', 'true');
+    });
+
+    if (selectMode) {
+      if (document.activeElement && tbody.contains(document.activeElement)) {
+        document.activeElement.blur();
+      }
+    } else {
+      clearSelection();
+    }
+    updateMergeButtonStates();
+  }
+
+  /* ==========================================================
+     EVENT HANDLERS
+     ========================================================== */
+
+  /* Input pada sel */
   tbody.addEventListener('input', function (e) {
     var tr = e.target.closest ? e.target.closest('tr') : null;
     if (!tr) return;
@@ -392,6 +763,7 @@
     recalc();
   });
 
+  /* Hapus baris */
   tbody.addEventListener('click', function (e) {
     var btn = e.target.closest ? e.target.closest('.del') : null;
     if (!btn) return;
@@ -399,19 +771,70 @@
     if (tr) { tr.parentNode.removeChild(tr); renumber(); recalc(); }
   });
 
+  /* Mouse down — seleksi sel di Mode Pilih */
+  tbody.addEventListener('mousedown', function (e) {
+    if (!selectMode) return;
+
+    var td = e.target.closest ? e.target.closest('td') : null;
+    if (!td || !tbody.contains(td)) return;
+    if (td.classList.contains('act')) return;
+
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      toggleCell(td);
+      anchorCell = td;
+    } else if (e.shiftKey && anchorCell) {
+      e.preventDefault();
+      selectRange(anchorCell, td);
+    } else {
+      e.preventDefault();
+      clearSelection();
+      selectCell(td);
+      anchorCell = td;
+    }
+  });
+
+  /* Klik di luar tabel → bersihkan seleksi */
+  document.addEventListener('mousedown', function (e) {
+    if (!selectMode) return;
+    if (e.target.closest && (e.target.closest('#tbody') || e.target.closest('.toolbar'))) return;
+    clearSelection();
+  });
+
+  /* Esc → bersihkan seleksi */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && selectMode) clearSelection();
+  });
+
+  /* Tombol toolbar */
+  document.getElementById('btnMode').addEventListener('click', function () {
+    setMode(!selectMode);
+  });
+
+  document.getElementById('btnMergeCenter').addEventListener('click', function () { doMerge(true); });
+  document.getElementById('btnMergeCells').addEventListener('click',  function () { doMerge(false); });
+  document.getElementById('btnMergeAcross').addEventListener('click', function () { doMergeAcross(); });
+  document.getElementById('btnUnmerge').addEventListener('click',     function () { doUnmerge(); });
+
   document.getElementById('btnAdd').addEventListener('click', function () {
-    tbody.appendChild(makeRow({})); renumber(); recalc();
+    tbody.appendChild(makeRow({}));
+    clearSelection();
+    renumber();
+    recalc();
     var cell = tbody.lastElementChild.querySelector('[data-f="name"]');
     if (cell) cell.focus();
   });
 
   document.getElementById('btnReset').addEventListener('click', function () {
-    if (confirm('Kembalikan seluruh isi surat jalan ke data awal (sesuai PDF)?')) render(defaultRows);
+    if (confirm('Kembalikan seluruh isi surat jalan ke data awal (sesuai PDF)?')) {
+      render(defaultRows);
+      setMode(false);
+    }
   });
 
-  /* ============================================================
-     DOWNLOAD PDF — jsPDF + autoTable (teks vektor, presisi)
-     ============================================================ */
+  /* ==========================================================
+     DOWNLOAD PDF — jsPDF + autoTable
+     ========================================================== */
   function buildFileName() {
     var noEl = document.querySelector('.meta .row > div:first-child span');
     var noText = noEl ? noEl.textContent.trim() : 'Surat-Jalan';
@@ -427,6 +850,42 @@
     }
   }
 
+  /* Bangun body PDF dengan dukungan colSpan/rowSpan */
+  function buildPdfBody() {
+    var grid = buildTbodyGrid();
+    var body = [];
+
+    for (var r = 0; r < grid.length; r++) {
+      var row = [];
+      for (var c = 0; c < 7; c++) {
+        var g = grid[r] && grid[r][c];
+        if (!g) { row.push(''); continue; }
+        if (!g.origin) continue;
+
+        var td = g.cell;
+        if (td.classList.contains('act')) continue;
+
+        var cellDef = { content: td.textContent.trim() };
+        if (g.cs > 1) cellDef.colSpan = g.cs;
+        if (g.rs > 1) cellDef.rowSpan = g.rs;
+
+        var halign = 'left';
+        if (td.classList.contains('c') || td.classList.contains('idx')) halign = 'center';
+        else if (td.classList.contains('r') || td.classList.contains('m3cell')) halign = 'right';
+
+        var valign = 'top';
+        if (td.classList.contains('merged-center')) {
+          halign = 'center';
+          valign = 'middle';
+        }
+        cellDef.styles = { halign: halign, valign: valign };
+        row.push(cellDef);
+      }
+      body.push(row);
+    }
+    return body;
+  }
+
   function generatePDF() {
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
@@ -434,12 +893,12 @@
     var pageW  = 210;
     var pageH  = 297;
     var ML = 13, MR = 13, MT = 12, MB = 12;
-    var contentW = pageW - ML - MR;   // 184 mm
+    var contentW = pageW - ML - MR;
     var centerX  = pageW / 2;
 
-    var y = MT + 4;                    // baseline awal
+    var y = MT + 4;
 
-    /* ---------------- 1. JUDUL ---------------- */
+    /* 1. JUDUL */
     doc.setFont('times', 'bold');
     doc.setFontSize(15);
     var title = 'SURAT JALAN';
@@ -448,7 +907,7 @@
     drawSpacedText(doc, title, centerX - titleW / 2, y, spacing);
     y += 10;
 
-    /* ---------------- 2. META ---------------- */
+    /* 2. META */
     doc.setFont('times', 'normal');
     doc.setFontSize(9);
 
@@ -458,13 +917,11 @@
 
     var noEl  = document.querySelector('.meta .row > div:first-child span');
     var halEl = document.querySelector('.meta .row > div:last-child span');
-    var noText  = (noEl  ? noEl.textContent  : '').trim();
-    var halText = (halEl ? halEl.textContent : '').trim();
-    doc.text('No     : ' + noText,  ML, y);
-    doc.text('Hal    : ' + halText, ML + contentW * 0.5, y);
+    doc.text('No     : ' + (noEl  ? noEl.textContent  : '').trim(),  ML, y);
+    doc.text('Hal    : ' + (halEl ? halEl.textContent : '').trim(), ML + contentW * 0.5, y);
     y += 6.5;
 
-    /* ---------------- 3. TUJUAN ---------------- */
+    /* 3. TUJUAN */
     doc.text('Kepada Yth,', ML, y);
     y += 4.5;
     doc.setFont('times', 'bold');
@@ -475,39 +932,25 @@
     doc.text('Di Tempat', ML, y);
     y += 7;
 
-    /* ---------------- 4. PEMBUKA ---------------- */
+    /* 4. PEMBUKA */
     var openEl = document.querySelectorAll('p.para')[0];
-    var opening = openEl ? openEl.textContent.trim() : '';
-    var openLines = doc.splitTextToSize(opening, contentW);
+    var openLines = doc.splitTextToSize(openEl ? openEl.textContent.trim() : '', contentW);
     var lineH = 4.0;
     openLines.forEach(function (ln, i) { doc.text(ln, ML, y + i * lineH); });
     y += openLines.length * lineH + 3;
 
-    /* ---------------- 5. DATA TABEL ---------------- */
-    var rows = [];
-    Array.prototype.forEach.call(tbody.children, function (tr) {
-      var cells = tr.querySelectorAll('td');
-      rows.push([
-        cells[0].textContent.trim(),
-        cells[1].textContent.trim(),
-        cells[2].textContent.trim(),
-        cells[3].textContent.trim(),
-        cells[4].textContent.trim(),
-        cells[5].textContent.trim(),
-        cells[6].textContent.trim()
-      ]);
-    });
-
+    /* 5. DATA TABEL */
+    var pdfBody = buildPdfBody();
     var totalQty   = document.getElementById('totalQty').textContent.trim();
     var totalM3    = document.getElementById('totalM3').textContent.trim();
     var totalColly = document.getElementById('totalColly').textContent.trim();
 
-    /* ---------------- 6. GAMBAR TABEL ---------------- */
+    /* 6. GAMBAR TABEL */
     doc.autoTable({
       startY: y,
       margin: { left: ML, right: MR, top: MT, bottom: MB },
       head: [['NO', 'NAMA BARANG', 'QTY', 'UKURAN', 'M³', 'Colly', 'KETERANGAN']],
-      body: rows,
+      body: pdfBody,
       foot: [[
         { content: 'TOTAL M³', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold' } },
         { content: totalQty,   styles: { halign: 'center', fontStyle: 'bold' } },
@@ -562,10 +1005,9 @@
 
     y = (doc.lastAutoTable && doc.lastAutoTable.finalY ? doc.lastAutoTable.finalY : y) + 6;
 
-    /* ---------------- 7. PENUTUP ---------------- */
+    /* 7. PENUTUP */
     var closeEl = document.querySelectorAll('p.para')[1];
-    var closing = closeEl ? closeEl.textContent.trim() : '';
-    var closeLines = doc.splitTextToSize(closing, contentW);
+    var closeLines = doc.splitTextToSize(closeEl ? closeEl.textContent.trim() : '', contentW);
 
     if (y + closeLines.length * lineH + 60 > pageH - MB) {
       doc.addPage();
@@ -577,7 +1019,7 @@
     closeLines.forEach(function (ln, i) { doc.text(ln, ML, y + i * lineH); });
     y += closeLines.length * lineH + 12;
 
-    /* ---------------- 8. TANDA TANGAN ---------------- */
+    /* 8. TANDA TANGAN */
     var sigEls = document.querySelectorAll('.signs .s > div[contenteditable]');
     var labels = [];
     Array.prototype.forEach.call(sigEls, function (el) { labels.push(el.textContent.trim()); });
@@ -590,7 +1032,6 @@
       doc.text(label, cx, y, { align: 'center' });
     });
 
-    /* ---------------- 9. SIMPAN ---------------- */
     doc.save(buildFileName());
   }
 
@@ -604,7 +1045,6 @@
     btn.disabled = true;
     btn.innerHTML = '⏳ Membuat PDF...';
 
-    // Beri waktu browser repaint tombol sebelum kerja sinkron
     setTimeout(function () {
       try {
         generatePDF();
@@ -620,6 +1060,7 @@
 
   /* ---------- INIT ---------- */
   render(defaultRows);
+  updateMergeButtonStates();
 })();
 </script>
 </body>
